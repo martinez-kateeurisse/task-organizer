@@ -7,8 +7,9 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import EditTaskModal from "../../components/EditTaskModal";
 import TaskRow from "../../components/TaskRow";
-import { TODAY, fmt } from "../../constants/data";
+import { fmt, Task, TODAY } from "../../constants/data";
 import { FONTS, P } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
 
@@ -21,6 +22,7 @@ const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 export default function CalendarScreen() {
   const { tasks, toggleTask } = useTasks();
   const [selectedDate, setSelectedDate] = useState(fmt(TODAY));
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const year = TODAY.getFullYear();
   const month = TODAY.getMonth();
@@ -149,9 +151,19 @@ export default function CalendarScreen() {
           <Text style={styles.empty}>No tasks for this day 🌿</Text>
         ) : (
           selectedTasks.map((t) => (
-            <TaskRow key={t.id} task={t} onToggle={toggleTask} />
+            <TaskRow
+              key={t.id}
+              task={t}
+              onToggle={toggleTask}
+              onEdit={setEditingTask}
+            />
           ))
         )}
+
+        <EditTaskModal
+          task={editingTask}
+          onClose={() => setEditingTask(null)}
+        />
       </ScrollView>
     </SafeAreaView>
   );

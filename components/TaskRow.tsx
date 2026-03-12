@@ -14,9 +14,10 @@ import { CATEGORY, FONTS, P, PRIORITY } from "../constants/theme";
 interface Props {
   task: Task;
   onToggle: (id: number) => void;
+  onEdit: (task: Task) => void; // called when the user taps ⋯ — passes the full task up
 }
 
-export default function TaskRow({ task, onToggle }: Props) {
+export default function TaskRow({ task, onToggle, onEdit }: Props) {
   const pr = PRIORITY[task.priority];
   const ca = CATEGORY[task.category] ?? { bg: P.plumLight, text: P.plum };
 
@@ -51,6 +52,16 @@ export default function TaskRow({ task, onToggle }: Props) {
           {task.category}
         </Text>
       </View>
+
+      {/* ⋯ menu button — tapping opens the EditTaskModal.
+          stopPropagation is not needed here; onPress on a child doesn't bubble in RN */}
+      <TouchableOpacity
+        onPress={() => onEdit(task)}
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} // expands the tap area without changing visual size
+        style={styles.menuBtn}
+      >
+        <Text style={styles.menuDots}>⋯</Text>
+      </TouchableOpacity>
     </TouchableOpacity>
   );
 }
@@ -121,5 +132,13 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansBold,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  menuBtn: {
+    paddingLeft: 4,
+  },
+  menuDots: {
+    fontSize: 18,
+    color: P.textSoft,
+    letterSpacing: -1,
   },
 });

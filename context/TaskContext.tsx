@@ -12,6 +12,18 @@ interface TaskContextType {
     category: Category;
     date: string;
   }) => void;
+  // updateTask replaces one task's fields by id, keeping id and done unchanged
+  updateTask: (
+    id: number,
+    updates: {
+      title: string;
+      priority: Priority;
+      category: Category;
+      date: string;
+    },
+  ) => void;
+  // deleteTask removes a task from the list entirely
+  deleteTask: (id: number) => void;
 }
 
 // createContext sets up the "pipe" — screens read from it, TaskProvider writes to it
@@ -39,8 +51,30 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     setTasks((prev) => [...prev, { ...task, id: Date.now(), done: false }]);
   }
 
+  // Merge updated fields into the matching task, leaving id and done untouched
+  function updateTask(
+    id: number,
+    updates: {
+      title: string;
+      priority: Priority;
+      category: Category;
+      date: string;
+    },
+  ) {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
+    );
+  }
+
+  // filter returns every task except the one with the matching id — effectively deleting it
+  function deleteTask(id: number) {
+    setTasks((prev) => prev.filter((t) => t.id !== id));
+  }
+
   return (
-    <TaskContext.Provider value={{ tasks, toggleTask, addTask }}>
+    <TaskContext.Provider
+      value={{ tasks, toggleTask, addTask, updateTask, deleteTask }}
+    >
       {children}
     </TaskContext.Provider>
   );

@@ -1,9 +1,11 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
+import EditTaskModal from "../../components/EditTaskModal";
 import TaskRow from "../../components/TaskRow";
-import { TODAY, fmt } from "../../constants/data";
+import { fmt, Task, TODAY } from "../../constants/data";
 import { FONTS, P } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
 
@@ -13,6 +15,7 @@ import { useTasks } from "../../context/TaskContext";
 
 export default function DashboardScreen() {
   const { tasks, toggleTask } = useTasks();
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
 
   const todayStr = fmt(TODAY);
   const todayTasks = tasks.filter((t) => t.date === todayStr);
@@ -154,9 +157,17 @@ export default function DashboardScreen() {
           <Text style={styles.sectionCount}>{total} tasks</Text>
         </View>
         {todayTasks.map((t) => (
-          <TaskRow key={t.id} task={t} onToggle={toggleTask} />
+          <TaskRow
+            key={t.id}
+            task={t}
+            onToggle={toggleTask}
+            onEdit={setEditingTask}
+          />
         ))}
       </ScrollView>
+
+      {/* EditTaskModal sits outside ScrollView so it overlays the whole screen */}
+      <EditTaskModal task={editingTask} onClose={() => setEditingTask(null)} />
     </SafeAreaView>
   );
 }
