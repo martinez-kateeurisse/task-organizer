@@ -1,6 +1,13 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { useState } from "react";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+    ScrollView,
+    StyleSheet,
+    Text,
+    TouchableOpacity,
+    View,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import EditTaskModal from "../../components/EditTaskModal";
@@ -156,14 +163,26 @@ export default function DashboardScreen() {
           <Text style={styles.sectionTitle}>Today's Tasks</Text>
           <Text style={styles.sectionCount}>{total} tasks</Text>
         </View>
-        {todayTasks.map((t) => (
-          <TaskRow
-            key={t.id}
-            task={t}
-            onToggle={toggleTask}
-            onEdit={setEditingTask}
-          />
-        ))}
+        {todayTasks.length === 0 ? (
+          <TouchableOpacity
+            style={styles.emptyState}
+            activeOpacity={0.7}
+            onPress={() => router.push("/(tabs)/add-task")}
+          >
+            <Text style={styles.emptyEmoji}>🌿</Text>
+            <Text style={styles.emptyTitle}>No tasks for today</Text>
+            <Text style={styles.emptySubtitle}>Tap here to add one</Text>
+          </TouchableOpacity>
+        ) : (
+          todayTasks.map((t) => (
+            <TaskRow
+              key={t.id}
+              task={t}
+              onToggle={toggleTask}
+              onEdit={setEditingTask}
+            />
+          ))
+        )}
       </ScrollView>
 
       {/* EditTaskModal sits outside ScrollView so it overlays the whole screen */}
@@ -297,4 +316,21 @@ const styles = StyleSheet.create({
     color: P.textSoft,
     fontFamily: FONTS.sans,
   },
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 40,
+    backgroundColor: P.white,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    marginTop: 4,
+  },
+  emptyEmoji: { fontSize: 36, marginBottom: 12 },
+  emptyTitle: {
+    fontSize: 16,
+    fontFamily: FONTS.serif,
+    color: P.textDark,
+    marginBottom: 4,
+  },
+  emptySubtitle: { fontSize: 13, fontFamily: FONTS.sans, color: P.textSoft },
 });

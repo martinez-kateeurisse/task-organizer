@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import {
     ScrollView,
@@ -148,7 +149,15 @@ export default function CalendarScreen() {
         </View>
 
         {selectedTasks.length === 0 ? (
-          <Text style={styles.empty}>No tasks for this day 🌿</Text>
+          <TouchableOpacity
+            style={styles.emptyState}
+            activeOpacity={0.7}
+            onPress={() => router.push("/(tabs)/add-task")}
+          >
+            <Text style={styles.emptyEmoji}>🌿</Text>
+            <Text style={styles.emptyTitle}>No tasks for this day</Text>
+            <Text style={styles.emptySubtitle}>Tap here to add one</Text>
+          </TouchableOpacity>
         ) : (
           selectedTasks.map((t) => (
             <TaskRow
@@ -256,11 +265,21 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansBold,
     color: P.plum,
   },
-  empty: {
-    textAlign: "center",
-    paddingVertical: 32,
-    color: P.textSoft,
-    fontFamily: FONTS.sans,
-    fontSize: 14,
+  emptyState: {
+    alignItems: "center",
+    paddingVertical: 40,
+    backgroundColor: P.white,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    marginTop: 4,
   },
+  emptyEmoji: { fontSize: 36, marginBottom: 12 },
+  emptyTitle: {
+    fontSize: 16,
+    fontFamily: FONTS.serif,
+    color: P.textDark,
+    marginBottom: 4,
+  },
+  emptySubtitle: { fontSize: 13, fontFamily: FONTS.sans, color: P.textSoft },
 });
