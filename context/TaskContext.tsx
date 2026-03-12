@@ -1,4 +1,11 @@
-import { createContext, ReactNode, useContext, useState } from "react";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import {
+    createContext,
+    ReactNode,
+    useContext,
+    useEffect,
+    useState,
+} from "react";
 import { Category, INITIAL_TASKS, Priority, Task } from "../constants/data";
 
 // ─── CONTEXT TYPE ─────────────────────────────────────────────────────────────
@@ -29,10 +36,44 @@ interface TaskContextType {
 // createContext sets up the "pipe" — screens read from it, TaskProvider writes to it
 const TaskContext = createContext<TaskContextType | null>(null);
 
+// The key used to store and retrieve tasks in AsyncStorage
+const STORAGE_KEY = "taskly:tasks";
+
 // ─── PROVIDER ─────────────────────────────────────────────────────────────────
-// Wrap the tab navigator with this so all tab screens share the same task list.
 export function TaskProvider({ children }: { children: ReactNode }) {
-  const [tasks, setTasks] = useState<Task[]>(INITIAL_TASKS);
+  const [tasks, setTasks] = useState<Task[]>([]);
+
+  // ── Load ──────────────────────────────────────────────────────────────────
+  // useEffect with an empty [] runs once when the app first opens.
+  // It reads the saved task list from AsyncStorage.
+  // If nothing is saved yet (first launch), it falls back to INITIAL_TASKS.
+  useEffect(() => {
+    async function loadTasks() {
+      try {
+        const stored = await AsyncStorage.getItem(STORAGE_KEY);
+        // getItem returns null if the key doesn't exist yet
+        setTasks(stored !== null ? JSON.parse(stored) : INITIAL_TASKS);
+      } catch {
+        setTasks(INITIAL_TASKS);
+      }
+    }
+    loadTasks();
+  }, []);
+
+  // ── Save ──────────────────────────────────────────────────────────────────
+  // useEffect with [tasks] runs every time the tasks array changes.
+  // It writes the latest list to AsyncStorage so it survives app restarts.
+  useEffect(() => {
+    async function saveTasks() {
+      try {
+        await AsyncStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+      } catch {
+        // storage write failed — silently ignore for now
+      }
+    }
+    // Only save once the initial load has run (avoids overwriting storage with [])
+    if (tasks.length > 0) saveTasks();
+  }, [tasks]);
 
   // Flip a task's done state by its id
   function toggleTask(id: number) {
