@@ -12,14 +12,18 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import { INITIAL_REMINDERS, Reminder } from "../../constants/data";
 import { FONTS, P } from "../../constants/theme";
+import { cancelReminder, scheduleReminder } from "../../utils/notifications";
 
 // ─── PROFILE SCREEN ───────────────────────────────────────────────────────────
 // Three sections:
-//   1. Profile header card — avatar, name, badges
-//   2. Reminders — each has a native Switch toggle
-//   3. Settings list — tappable rows with chevrons
-//
-// Reminders state is local to this screen (doesn't affect tasks).
+//   1. Profile header card
+//   2. Reminders — each toggle schedules or cancels real notifications
+//   3. Settings list
+
+// notifIds stores the scheduled notification identifiers for each reminder.
+// Shape: { [reminderId]: ['notif-uuid-1', 'notif-uuid-2', ...] }
+// We need these to cancel the right notifications when a toggle is turned off.
+type NotifIds = Record<number, string[]>;
 
 const SETTINGS = [
   "Notifications",
@@ -31,8 +35,33 @@ const SETTINGS = [
 
 export default function ProfileScreen() {
   const [reminders, setReminders] = useState<Reminder[]>(INITIAL_REMINDERS);
+  const [notifIds, setNotifIds] = useState<NotifIds>({});
 
-  function toggleReminder(id: number) {
+  async function toggleReminder(id: number) {
+    const reminder = reminders.find((r) => r.id === id);
+    if (!reminder) return;
+
+    if (reminder.active) {
+      // Turning OFF — cancel all notifications tied to this reminder
+      const ids = notifIds[id] ?? [];
+      await cancelReminder(ids);
+      // Remove this reminder's ids from state
+      setNotifIds((prev) => {
+        const next = { ...prev };
+        delete next[id];
+        return next;
+      });
+    } else {
+      // Turning ON — schedule notifications and store the returned identifiers
+      const ids = await scheduleReminder(
+        reminder.title,
+        reminder.time,
+        reminder.days,
+      );
+      setNotifIds((prev) => ({ ...prev, [id]: ids }));
+    }
+
+    // Flip the active boolean in the reminders list
     setReminders((prev) =>
       prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r)),
     );
@@ -51,11 +80,9 @@ export default function ProfileScreen() {
           end={{ x: 1, y: 1 }}
           style={styles.profileCard}
         >
-          {/* Avatar circle with initials */}
           <View style={styles.avatar}>
             <Text style={styles.avatarText}>MK</Text>
           </View>
-
           <View style={styles.profileInfo}>
             <Text style={styles.profileName}>Master Keyt</Text>
             <Text style={styles.profileEmail}>master.keyt@email.com</Text>
@@ -81,7 +108,9 @@ export default function ProfileScreen() {
                 {r.time} · {r.days}
               </Text>
             </View>
-            {/* Switch is RN's native toggle — ios_backgroundColor sets the off-state color on iOS */}
+            {/* Switch is RN's native toggle.
+                onValueChange fires when the user flips it — we call toggleReminder
+                which schedules or cancels the actual OS notification. */}
             <Switch
               value={r.active}
               onValueChange={() => toggleReminder(r.id)}
@@ -102,7 +131,6 @@ export default function ProfileScreen() {
             style={styles.settingsRow}
           >
             <Text style={styles.settingsText}>{item}</Text>
-            {/* Chevron icon drawn with SVG path */}
             <Svg width={16} height={16} viewBox="0 0 16 16" fill="none">
               <Path
                 d="M6 4l4 4-4 4"
@@ -174,7 +202,6 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     marginBottom: 12,
   },
-
   reminderRow: {
     flexDirection: "row",
     alignItems: "center",

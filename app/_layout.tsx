@@ -12,15 +12,13 @@ import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { requestPermission } from "../utils/notifications";
 
 // ─── ROOT LAYOUT ──────────────────────────────────────────────────────────────
-// This is the outermost shell of the app.
-// It does two things:
-//   1. Loads custom fonts before the app renders
-//   2. Sets up the root Stack navigator (which contains the (tabs) group)
-//
-// SplashScreen.preventAutoHideAsync keeps the splash visible while fonts load.
-// Once loaded, we hide it and let the app render.
+// Outermost shell of the app. Responsible for:
+//   1. Keeping the splash screen visible while fonts load
+//   2. Loading custom fonts
+//   3. Requesting notification permission once fonts are ready
 
 SplashScreen.preventAutoHideAsync();
 
@@ -35,7 +33,11 @@ export default function RootLayout() {
   });
 
   useEffect(() => {
-    if (loaded) SplashScreen.hideAsync();
+    if (!loaded) return;
+    SplashScreen.hideAsync();
+    // Request notification permission after the app is ready.
+    // We don't block on the result — if denied, toggles on Profile simply won't fire.
+    requestPermission();
   }, [loaded]);
 
   // Return null while fonts are loading — splash screen stays visible
