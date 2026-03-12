@@ -2,28 +2,56 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
-import { TODAY, WEEKLY_STATS } from "../../constants/data";
+import { TODAY, addDays, fmt } from "../../constants/data";
 import { CATEGORY, FONTS, P } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
 
 // ─── STATS SCREEN ─────────────────────────────────────────────────────────────
-// Three sections:
-//   1. Streak card (gradient) + completion rate mini-ring
-//   2. Weekly bar chart
-//   3. Per-category progress bars
+// All numbers are computed live from the real task list.
+// No hardcoded data — weekly chart and streak both reflect actual history.
 
 export default function StatsScreen() {
   const { tasks } = useTasks();
 
+  // ── Overall completion rate ───────────────────────────────────────────────
   const totalDone = tasks.filter((t) => t.done).length;
   const totalTasks = tasks.length;
   const rate =
     totalTasks === 0 ? 0 : Math.round((totalDone / totalTasks) * 100);
 
-  // The tallest bar gets full height; others scale relative to it
-  const maxTotal = Math.max(...WEEKLY_STATS.map((d) => d.total));
+  // ── Streak ────────────────────────────────────────────────────────────────
+  // Walk backwards day by day from today.
+  // A day "counts" if it has at least one completed task.
+  // Stop as soon as we hit a day with no completed tasks.
+  let streak = 0;
+  let checkDate = new Date(TODAY);
+  while (true) {
+    const dateStr = fmt(checkDate);
+    const daysDone = tasks.filter((t) => t.date === dateStr && t.done).length;
+    if (daysDone === 0) break;
+    streak++;
+    checkDate = addDays(checkDate, -1); // step back one day
+    if (streak > 365) break; // safety cap
+  }
 
-  // Per-category stats computed from the live task list
+  // ── Weekly chart data ─────────────────────────────────────────────────────
+  // Build stats for the last 7 days (today + 6 days back).
+  // Each entry has: day label, done count, total count.
+  const weeklyStats = Array.from({ length: 7 }, (_, i) => {
+    const date = addDays(TODAY, -(6 - i)); // oldest day first
+    const dateStr = fmt(date);
+    const dayTasks = tasks.filter((t) => t.date === dateStr);
+    return {
+      day: date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 3),
+      done: dayTasks.filter((t) => t.done).length,
+      total: dayTasks.length,
+      isToday: dateStr === fmt(TODAY),
+    };
+  });
+
+  const maxTotal = Math.max(...weeklyStats.map((d) => d.total), 1); // min 1 avoids divide-by-zero
+
+  // ── Per-category stats ────────────────────────────────────────────────────
   const catStats = (["Work", "Personal", "Health"] as const).map((cat) => {
     const catTasks = tasks.filter((t) => t.category === cat);
     const catDone = catTasks.filter((t) => t.done).length;
@@ -38,16 +66,11 @@ export default function StatsScreen() {
     };
   });
 
-  // Mini completion-rate SVG ring
+  // ── SVG mini-ring ─────────────────────────────────────────────────────────
   const ringR = 20;
   const ringCirc = 2 * Math.PI * ringR;
   const ringCx = 26;
   const ringCy = 26;
-
-  // Today's 3-letter day label for highlighting in the bar chart
-  const todayLabel = TODAY.toLocaleDateString("en-US", {
-    weekday: "short",
-  }).slice(0, 3);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -62,22 +85,30 @@ export default function StatsScreen() {
 
         {/* ── Row 1: Streak card + Completion rate ─────────────── */}
         <View style={styles.topRow}>
-          {/* Streak card — gradient for a reward feel */}
+          {/* Streak card — shows real consecutive-day streak */}
           <LinearGradient
             colors={[P.plum, "#7B52AB"]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.streakCard}
           >
-            <Text style={styles.streakEmoji}>🔥</Text>
-            <Text style={styles.streakNum}>7</Text>
+            {/* Emoji changes based on streak length for a fun reward feel */}
+            <Text style={styles.streakEmoji}>
+              {streak === 0
+                ? "🌱"
+                : streak < 3
+                  ? "✨"
+                  : streak < 7
+                    ? "🔥"
+                    : "🏆"}
+            </Text>
+            <Text style={styles.streakNum}>{streak}</Text>
             <Text style={styles.streakLabel}>Day Streak</Text>
           </LinearGradient>
 
           {/* Completion rate card */}
           <View style={styles.rateCard}>
             <Svg width={52} height={52}>
-              {/* Background track */}
               <Circle
                 cx={ringCx}
                 cy={ringCy}
@@ -86,7 +117,6 @@ export default function StatsScreen() {
                 stroke={P.border}
                 strokeWidth={5}
               />
-              {/* Filled arc */}
               <Circle
                 cx={ringCx}
                 cy={ringCy}
@@ -115,40 +145,41 @@ export default function StatsScreen() {
           </View>
         </View>
 
-        {/* ── Row 2: Weekly bar chart ──────────────────────────────
-            Each day has a background bar (total) and a fill bar (completed).
-            BAR_HEIGHT = fixed container height; each bar scales within it. */}
+        {/* ── Row 2: Weekly bar chart (real data) ──────────────── */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>This Week</Text>
+          <Text style={styles.cardTitle}>Last 7 Days</Text>
           <View style={styles.barChart}>
-            {WEEKLY_STATS.map((d) => {
-              const isToday = d.day === todayLabel;
-              // barH: how tall the total-tasks bar is as a % of the container
+            {weeklyStats.map((d, i) => {
+              // barH: height of the total-tasks bar as % of max
               const barH = Math.round((d.total / maxTotal) * 100);
-              // fillH: what fraction of the bar is completed
+              // fillH: completed portion within that bar
               const fillH =
                 d.total === 0 ? 0 : Math.round((d.done / d.total) * 100);
 
               return (
-                <View key={d.day} style={styles.barCol}>
-                  {/* The bar lives in a fixed-height container; height is a % string */}
+                <View key={i} style={styles.barCol}>
                   <View style={styles.barContainer}>
-                    <View
-                      style={[styles.barTrack, { height: `${barH}%` as any }]}
-                    >
+                    {d.total === 0 ? (
+                      // No tasks that day — show a faint placeholder bar
+                      <View style={styles.barEmpty} />
+                    ) : (
                       <View
-                        style={[
-                          styles.barFill,
-                          {
-                            height: `${fillH}%` as any,
-                            backgroundColor: isToday ? P.plum : P.lavender,
-                          },
-                        ]}
-                      />
-                    </View>
+                        style={[styles.barTrack, { height: `${barH}%` as any }]}
+                      >
+                        <View
+                          style={[
+                            styles.barFill,
+                            {
+                              height: `${fillH}%` as any,
+                              backgroundColor: d.isToday ? P.plum : P.lavender,
+                            },
+                          ]}
+                        />
+                      </View>
+                    )}
                   </View>
                   <Text
-                    style={[styles.barLabel, isToday && styles.barLabelToday]}
+                    style={[styles.barLabel, d.isToday && styles.barLabelToday]}
                   >
                     {d.day}
                   </Text>
@@ -174,7 +205,7 @@ export default function StatsScreen() {
           </View>
         </View>
 
-        {/* ── Row 3: Category breakdown bars ──────────────────── */}
+        {/* ── Row 3: Category breakdown ────────────────────────── */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>By Category</Text>
           {catStats.map((cs) => {
@@ -283,16 +314,8 @@ const styles = StyleSheet.create({
     height: 100,
     gap: 4,
   },
-  barCol: {
-    flex: 1,
-    alignItems: "center",
-    gap: 6,
-  },
-  barContainer: {
-    width: "100%",
-    height: 80,
-    justifyContent: "flex-end", // bars grow upward from the bottom
-  },
+  barCol: { flex: 1, alignItems: "center", gap: 6 },
+  barContainer: { width: "100%", height: 80, justifyContent: "flex-end" },
   barTrack: {
     width: "100%",
     backgroundColor: P.plumLight,
@@ -300,19 +323,16 @@ const styles = StyleSheet.create({
     overflow: "hidden",
     justifyContent: "flex-end",
   },
-  barFill: {
+  barFill: { width: "100%", borderRadius: 5 },
+  barEmpty: {
     width: "100%",
+    height: 4,
+    backgroundColor: P.border,
     borderRadius: 5,
   },
-  barLabel: {
-    fontSize: 10,
-    fontFamily: FONTS.sansMed,
-    color: P.textSoft,
-  },
-  barLabelToday: {
-    fontFamily: FONTS.sansBold,
-    color: P.plum,
-  },
+  barLabel: { fontSize: 10, fontFamily: FONTS.sansMed, color: P.textSoft },
+  barLabelToday: { fontFamily: FONTS.sansBold, color: P.plum },
+
   legend: { flexDirection: "row", gap: 16, marginTop: 14 },
   legendItem: { flexDirection: "row", alignItems: "center", gap: 6 },
   legendDot: { width: 10, height: 10, borderRadius: 3 },
@@ -332,8 +352,5 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     overflow: "hidden",
   },
-  catFill: {
-    height: "100%",
-    borderRadius: 4,
-  },
+  catFill: { height: "100%", borderRadius: 4 },
 });
