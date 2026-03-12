@@ -84,7 +84,7 @@ export default function CalendarScreen() {
                 if (!day)
                   return <View key={`e${ci}`} style={styles.emptyCell} />;
 
-                const dateStr = fmt(new Date(year, month, day));
+                const dateStr = fmt(new Date(year, month, day, 12, 0, 0));
                 const isToday = dateStr === fmt(TODAY);
                 const isSel = dateStr === selectedDate;
                 const hasTasks = (taskCountByDate[dateStr] || 0) > 0;

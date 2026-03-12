@@ -1,5 +1,5 @@
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { Task } from "../constants/data";
+import { fmt, Task, TODAY } from "../constants/data";
 import { CATEGORY, FONTS, P, PRIORITY } from "../constants/theme";
 
 // ─── TASK ROW ─────────────────────────────────────────────────────────────────
@@ -20,6 +20,18 @@ interface Props {
 export default function TaskRow({ task, onToggle, onEdit }: Props) {
   const pr = PRIORITY[task.priority];
   const ca = CATEGORY[task.category] ?? { bg: P.plumLight, text: P.plum };
+
+  // A task is overdue if its date is before today and it isn't done yet
+  const isOverdue = !task.done && task.date < fmt(TODAY);
+
+  // Format the date for display — e.g. "Mar 12"
+  const dateLabel = new Date(task.date + "T12:00:00").toLocaleDateString(
+    "en-US",
+    {
+      month: "short",
+      day: "numeric",
+    },
+  );
 
   return (
     <TouchableOpacity
@@ -55,9 +67,23 @@ export default function TaskRow({ task, onToggle, onEdit }: Props) {
 
       {/* ⋯ menu button — tapping opens the EditTaskModal.
           stopPropagation is not needed here; onPress on a child doesn't bubble in RN */}
+      {/* Due date badge — red if overdue, soft lilac if upcoming */}
+      <View style={[styles.dateBadge, isOverdue && styles.dateBadgeOverdue]}>
+        <Text
+          style={[
+            styles.dateBadgeText,
+            isOverdue && styles.dateBadgeTextOverdue,
+          ]}
+        >
+          {isOverdue ? "⚠ " : ""}
+          {dateLabel}
+        </Text>
+      </View>
+
+      {/* ⋯ menu button */}
       <TouchableOpacity
         onPress={() => onEdit(task)}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} // expands the tap area without changing visual size
+        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
         style={styles.menuBtn}
       >
         <Text style={styles.menuDots}>⋯</Text>
@@ -132,6 +158,23 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sansBold,
     textTransform: "uppercase",
     letterSpacing: 0.5,
+  },
+  dateBadge: {
+    backgroundColor: P.lilac,
+    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+  },
+  dateBadgeOverdue: {
+    backgroundColor: "#FDECEA", // light red background
+  },
+  dateBadgeText: {
+    fontSize: 10,
+    fontFamily: FONTS.sansBold,
+    color: P.textSoft,
+  },
+  dateBadgeTextOverdue: {
+    color: "#C0392B", // red text for overdue
   },
   menuBtn: {
     paddingLeft: 4,
