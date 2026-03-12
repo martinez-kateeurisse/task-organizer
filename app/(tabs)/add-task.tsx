@@ -1,5 +1,9 @@
+import DateTimePicker, {
+    DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { useState } from "react";
 import {
+    Platform,
     ScrollView,
     StyleSheet,
     Text,
@@ -23,30 +27,36 @@ export default function AddTaskScreen() {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<PriorityType>("medium");
   const [category, setCategory] = useState<Category>("Work");
-  const [due, setDue] = useState(fmt(TODAY));
+  const [dueDate, setDueDate] = useState<Date>(new Date(TODAY));
+  const [showPicker, setShowPicker] = useState(false);
   const [success, setSuccess] = useState(false);
+
+  // Called by DateTimePicker when the user picks a date.
+  // On Android the picker closes itself; on iOS we close it manually.
+  function onDateChange(event: DateTimePickerEvent, selected?: Date) {
+    if (Platform.OS === "android") setShowPicker(false);
+    if (selected) setDueDate(selected);
+  }
 
   function handleSubmit() {
     if (!title.trim()) return;
-    addTask({ title: title.trim(), priority, category, date: due });
-    // Reset form to defaults
+    addTask({ title: title.trim(), priority, category, date: fmt(dueDate) });
     setTitle("");
     setPriority("medium");
     setCategory("Work");
-    setDue(fmt(TODAY));
-    // Show success flash for 2.2 seconds
+    setDueDate(new Date(TODAY));
     setSuccess(true);
     setTimeout(() => setSuccess(false), 2200);
   }
 
-  const isReady = title.trim().length > 0; // controls submit button state
+  const isReady = title.trim().length > 0;
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
       <ScrollView
         contentContainerStyle={styles.content}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled" // tapping outside keyboard dismisses it
+        keyboardShouldPersistTaps="handled"
       >
         {/* Header */}
         <View style={styles.header}>
@@ -64,8 +74,6 @@ export default function AddTaskScreen() {
         {/* Task name input */}
         <View style={styles.field}>
           <Text style={styles.label}>Task Name</Text>
-          {/* TextInput is RN's replacement for <input>.
-              onChangeText gives the raw string value directly (no event.target.value) */}
           <TextInput
             value={title}
             onChangeText={setTitle}
@@ -94,7 +102,6 @@ export default function AddTaskScreen() {
                     active && { backgroundColor: ps.bg },
                   ]}
                 >
-                  {/* Priority dot */}
                   <View
                     style={[
                       styles.toggleDot,
@@ -147,17 +154,36 @@ export default function AddTaskScreen() {
           </View>
         </View>
 
-        {/* Due date — TextInput for now; date picker will be added in a later session */}
+        {/* Due date — tappable button that opens the native date picker */}
         <View style={styles.field}>
-          <Text style={styles.label}>Due Date (YYYY-MM-DD)</Text>
-          <TextInput
-            value={due}
-            onChangeText={setDue}
-            placeholder="2025-12-31"
-            placeholderTextColor={P.textSoft}
-            style={styles.input}
-            keyboardType="numbers-and-punctuation"
-          />
+          <Text style={styles.label}>Due Date</Text>
+          <TouchableOpacity
+            onPress={() => setShowPicker(true)}
+            activeOpacity={0.7}
+            style={styles.dateBtn}
+          >
+            <Text style={styles.dateBtnIcon}>📅</Text>
+            <Text style={styles.dateBtnText}>
+              {dueDate.toLocaleDateString("en-US", {
+                weekday: "short",
+                month: "long",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Only mount the picker when needed */}
+          {showPicker && (
+            <DateTimePicker
+              value={dueDate}
+              mode="date"
+              display={Platform.OS === "ios" ? "compact" : "default"}
+              onChange={onDateChange}
+              minimumDate={new Date(TODAY)}
+              accentColor={P.plum}
+            />
+          )}
         </View>
 
         {/* Submit button */}
@@ -224,11 +250,21 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.serif,
     color: P.textDark,
   },
-
-  toggleRow: {
+  dateBtn: {
     flexDirection: "row",
-    gap: 8,
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: P.white,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
   },
+  dateBtnIcon: { fontSize: 16 },
+  dateBtnText: { fontSize: 15, fontFamily: FONTS.serif, color: P.textDark },
+
+  toggleRow: { flexDirection: "row", gap: 8 },
   toggleBtn: {
     flex: 1,
     flexDirection: "row",
@@ -241,16 +277,8 @@ const styles = StyleSheet.create({
     borderColor: P.border,
     backgroundColor: P.white,
   },
-  toggleDot: {
-    width: 7,
-    height: 7,
-    borderRadius: 4,
-  },
-  toggleText: {
-    fontSize: 12,
-    fontFamily: FONTS.sansBold,
-    color: P.textSoft,
-  },
+  toggleDot: { width: 7, height: 7, borderRadius: 4 },
+  toggleText: { fontSize: 12, fontFamily: FONTS.sansBold, color: P.textSoft },
 
   submitBtn: {
     marginTop: 8,
@@ -275,7 +303,5 @@ const styles = StyleSheet.create({
     color: "white",
     letterSpacing: 1.2,
   },
-  submitTextDisabled: {
-    color: P.textSoft,
-  },
+  submitTextDisabled: { color: P.textSoft },
 });

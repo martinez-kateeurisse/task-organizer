@@ -1,14 +1,18 @@
+import DateTimePicker, {
+    DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
 import { useEffect, useState } from "react";
 import {
     Alert,
     Modal,
+    Platform,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
-import { Category, fmt, Priority, Task, TODAY } from "../constants/data";
+import { Category, fmt, Priority, Task } from "../constants/data";
 import { CATEGORY, FONTS, P, PRIORITY } from "../constants/theme";
 import { useTasks } from "../context/TaskContext";
 
@@ -32,21 +36,34 @@ export default function EditTaskModal({ task, onClose }: Props) {
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
   const [category, setCategory] = useState<Category>("Work");
-  const [due, setDue] = useState(fmt(TODAY));
+  const [dueDate, setDueDate] = useState<Date>(new Date());
+  const [showPicker, setShowPicker] = useState(false);
 
-  // useEffect watches for when a new task is passed in and pre-fills the form fields
+  // Pre-fill all fields when a task is passed in.
+  // Adding T12:00:00 prevents timezone shift that can move the date back by one day.
   useEffect(() => {
     if (task) {
       setTitle(task.title);
       setPriority(task.priority);
       setCategory(task.category);
-      setDue(task.date);
+      setDueDate(new Date(task.date + "T12:00:00"));
+      setShowPicker(false);
     }
   }, [task]);
 
+  function onDateChange(event: DateTimePickerEvent, selected?: Date) {
+    if (Platform.OS === "android") setShowPicker(false);
+    if (selected) setDueDate(selected);
+  }
+
   function handleSave() {
     if (!title.trim() || !task) return;
-    updateTask(task.id, { title: title.trim(), priority, category, date: due });
+    updateTask(task.id, {
+      title: title.trim(),
+      priority,
+      category,
+      date: fmt(dueDate),
+    });
     onClose();
   }
 
@@ -60,7 +77,7 @@ export default function EditTaskModal({ task, onClose }: Props) {
         { text: "Cancel", style: "cancel" },
         {
           text: "Delete",
-          style: "destructive", // renders red on iOS
+          style: "destructive",
           onPress: () => {
             deleteTask(task.id);
             onClose();
@@ -71,14 +88,12 @@ export default function EditTaskModal({ task, onClose }: Props) {
   }
 
   return (
-    // Modal is RN's built-in overlay component.
-    // visible controls whether it's shown; animationType="slide" makes it rise from the bottom.
-    // transparent keeps the background visible behind the sheet.
+    // visible controls whether it shows; animationType="slide" makes it rise from the bottom
     <Modal
       visible={task !== null}
       animationType="slide"
       transparent
-      onRequestClose={onClose} // Android back button closes the modal
+      onRequestClose={onClose}
     >
       {/* Semi-transparent backdrop — tapping it closes the modal */}
       <TouchableOpacity
@@ -87,7 +102,6 @@ export default function EditTaskModal({ task, onClose }: Props) {
         onPress={onClose}
       />
 
-      {/* The sheet itself sits at the bottom of the screen */}
       <View style={styles.sheet}>
         {/* Drag handle — visual hint that this is a bottom sheet */}
         <View style={styles.handle} />
@@ -179,19 +193,37 @@ export default function EditTaskModal({ task, onClose }: Props) {
           })}
         </View>
 
-        {/* Due date */}
-        <Text style={styles.label}>Due Date (YYYY-MM-DD)</Text>
-        <TextInput
-          value={due}
-          onChangeText={setDue}
-          style={styles.input}
-          placeholderTextColor={P.textSoft}
-          keyboardType="numbers-and-punctuation"
-        />
+        {/* Due date — tappable button that opens the native picker */}
+        <Text style={styles.label}>Due Date</Text>
+        <TouchableOpacity
+          onPress={() => setShowPicker(true)}
+          activeOpacity={0.7}
+          style={styles.dateBtn}
+        >
+          <Text style={styles.dateBtnIcon}>📅</Text>
+          <Text style={styles.dateBtnText}>
+            {dueDate.toLocaleDateString("en-US", {
+              weekday: "short",
+              month: "long",
+              day: "numeric",
+              year: "numeric",
+            })}
+          </Text>
+        </TouchableOpacity>
+
+        {/* Only mount the picker when needed */}
+        {showPicker && (
+          <DateTimePicker
+            value={dueDate}
+            mode="date"
+            display={Platform.OS === "ios" ? "compact" : "default"}
+            onChange={onDateChange}
+            accentColor={P.plum}
+          />
+        )}
 
         {/* Action buttons */}
         <View style={styles.btnRow}>
-          {/* Delete — outlined red-tinted button */}
           <TouchableOpacity
             onPress={handleDelete}
             activeOpacity={0.7}
@@ -199,8 +231,6 @@ export default function EditTaskModal({ task, onClose }: Props) {
           >
             <Text style={styles.deleteBtnText}>Delete</Text>
           </TouchableOpacity>
-
-          {/* Save — filled plum button */}
           <TouchableOpacity
             onPress={handleSave}
             activeOpacity={0.8}
@@ -216,7 +246,6 @@ export default function EditTaskModal({ task, onClose }: Props) {
 }
 
 const styles = StyleSheet.create({
-  // backdrop covers the whole screen behind the sheet
   backdrop: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.35)",
@@ -227,7 +256,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 28,
     padding: 24,
     paddingBottom: 40,
-    // position absolute pins the sheet to the bottom of the screen
     position: "absolute",
     bottom: 0,
     left: 0,
@@ -270,6 +298,21 @@ const styles = StyleSheet.create({
     color: P.textDark,
     marginBottom: 18,
   },
+  dateBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: P.lilac,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    paddingHorizontal: 16,
+    paddingVertical: 13,
+    marginBottom: 18,
+  },
+  dateBtnIcon: { fontSize: 16 },
+  dateBtnText: { fontSize: 15, fontFamily: FONTS.serif, color: P.textDark },
+
   toggleRow: { flexDirection: "row", gap: 8, marginBottom: 18 },
   toggleBtn: {
     flex: 1,
