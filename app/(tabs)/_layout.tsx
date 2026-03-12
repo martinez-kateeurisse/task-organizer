@@ -1,47 +1,105 @@
-import { HapticTab } from "@/components/HapticTab";
-import { IconSymbol } from "@/components/ui/IconSymbol";
-import { Colors } from "@/constants/Colors";
-import { useColorScheme } from "@/hooks/useColorScheme";
+import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import React from "react";
+import { FONTS, P } from "../../constants/theme";
+import { TaskProvider } from "../../context/TaskContext";
+
+// ─── TAB LAYOUT ───────────────────────────────────────────────────────────────
+// Registers all 5 tabs and wraps them in TaskProvider so every screen
+// shares the same task list without passing props through each level.
+//
+// Ionicons comes bundled with Expo — no install needed.
+// Each tab needs a `name` matching its filename in app/(tabs)/.
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-        headerShown: false,
-        tabBarButton: HapticTab,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Today",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="house.fill" color={color} />
-          ),
+    // TaskProvider must wrap Tabs so all screens can call useTasks()
+    <TaskProvider>
+      <Tabs
+        screenOptions={{
+          headerShown: false, // we draw our own header inside each screen
+          tabBarActiveTintColor: P.plum,
+          tabBarInactiveTintColor: P.textSoft,
+          tabBarStyle: {
+            backgroundColor: P.white,
+            borderTopColor: P.border,
+            borderTopWidth: 1,
+            paddingTop: 6,
+            height: 70,
+          },
+          tabBarLabelStyle: {
+            fontFamily: FONTS.sansBold,
+            fontSize: 10,
+            letterSpacing: 0.4,
+            marginBottom: 4,
+          },
         }}
-      />
-      <Tabs.Screen
-        name="tasks"
-        options={{
-          title: "All Tasks",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="checklist" color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="add-task"
-        options={{
-          title: "Add Task",
-          tabBarIcon: ({ color }) => (
-            <IconSymbol size={28} name="plus.circle.fill" color={color} />
-          ),
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="index"
+          options={{
+            title: "Home",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "home" : "home-outline"}
+                size={22}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="calendar"
+          options={{
+            title: "Calendar",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "calendar" : "calendar-outline"}
+                size={22}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="add-task"
+          options={{
+            title: "Add",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "add-circle" : "add-circle-outline"}
+                size={26}
+                color={focused ? P.plum : color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="stats"
+          options={{
+            title: "Stats",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "bar-chart" : "bar-chart-outline"}
+                size={22}
+                color={color}
+              />
+            ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: "Profile",
+            tabBarIcon: ({ color, focused }) => (
+              <Ionicons
+                name={focused ? "person" : "person-outline"}
+                size={22}
+                color={color}
+              />
+            ),
+          }}
+        />
+      </Tabs>
+    </TaskProvider>
   );
 }
