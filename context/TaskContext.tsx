@@ -12,6 +12,7 @@ import { Category, INITIAL_TASKS, Priority, Task } from "../constants/data";
 // Describes all the data and actions that every screen can access.
 interface TaskContextType {
   tasks: Task[];
+  loading: boolean;
   toggleTask: (id: number) => void;
   addTask: (task: {
     title: string;
@@ -42,6 +43,7 @@ const STORAGE_KEY = "taskly:tasks";
 // ─── PROVIDER ─────────────────────────────────────────────────────────────────
 export function TaskProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
 
   // ── Load ──────────────────────────────────────────────────────────────────
   // useEffect with an empty [] runs once when the app first opens.
@@ -51,10 +53,13 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     async function loadTasks() {
       try {
         const stored = await AsyncStorage.getItem(STORAGE_KEY);
-        // getItem returns null if the key doesn't exist yet
         setTasks(stored !== null ? JSON.parse(stored) : INITIAL_TASKS);
       } catch {
         setTasks(INITIAL_TASKS);
+      } finally {
+        // finally runs whether the load succeeded or failed —
+        // either way we're done loading and the app can render
+        setLoading(false);
       }
     }
     loadTasks();
@@ -114,7 +119,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   return (
     <TaskContext.Provider
-      value={{ tasks, toggleTask, addTask, updateTask, deleteTask }}
+      value={{ tasks, loading, toggleTask, addTask, updateTask, deleteTask }}
     >
       {children}
     </TaskContext.Provider>
