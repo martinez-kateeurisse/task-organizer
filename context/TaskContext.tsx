@@ -1,10 +1,10 @@
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import {
-    createContext,
-    ReactNode,
-    useContext,
-    useEffect,
-    useState,
+  createContext,
+  ReactNode,
+  useContext,
+  useEffect,
+  useState,
 } from "react";
 import { Category, INITIAL_TASKS, Priority, Task } from "../constants/data";
 
@@ -20,7 +20,6 @@ interface TaskContextType {
     category: Category;
     date: string;
   }) => void;
-  // updateTask replaces one task's fields by id, keeping id and done unchanged
   updateTask: (
     id: number,
     updates: {
@@ -30,8 +29,8 @@ interface TaskContextType {
       date: string;
     },
   ) => void;
-  // deleteTask removes a task from the list entirely
   deleteTask: (id: number) => void;
+  markAllDone: (todayStr: string) => void;
 }
 
 // createContext sets up the "pipe" — screens read from it, TaskProvider writes to it
@@ -57,8 +56,6 @@ export function TaskProvider({ children }: { children: ReactNode }) {
       } catch {
         setTasks(INITIAL_TASKS);
       } finally {
-        // finally runs whether the load succeeded or failed —
-        // either way we're done loading and the app can render
         setLoading(false);
       }
     }
@@ -117,9 +114,24 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     setTasks((prev) => prev.filter((t) => t.id !== id));
   }
 
+  // sets done: true only on tasks due today
+  function markAllDone(todayStr: string) {
+    setTasks((prev) =>
+      prev.map((t) => (t.date === todayStr ? { ...t, done: true } : t)),
+    );
+  }
+
   return (
     <TaskContext.Provider
-      value={{ tasks, loading, toggleTask, addTask, updateTask, deleteTask }}
+      value={{
+        tasks,
+        loading,
+        toggleTask,
+        addTask,
+        updateTask,
+        deleteTask,
+        markAllDone,
+      }}
     >
       {children}
     </TaskContext.Provider>

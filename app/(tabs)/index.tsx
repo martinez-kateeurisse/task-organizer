@@ -21,7 +21,7 @@ import { useTasks } from "../../context/TaskContext";
 // useTasks() pulls tasks and toggleTask from TaskContext — no props needed.
 
 export default function DashboardScreen() {
-  const { tasks, toggleTask } = useTasks();
+  const { tasks, toggleTask, markAllDone } = useTasks();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<
     "all" | "high" | "medium" | "low"
@@ -179,7 +179,19 @@ export default function DashboardScreen() {
         {/* Today task list */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Today's Tasks</Text>
-          <Text style={styles.sectionCount}>{todayTasks.length} tasks</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <Text style={styles.sectionCount}>{todayTasks.length} tasks</Text>
+            {/* Only show the button when there are incomplete tasks today */}
+            {allTodayTasks.some((t) => !t.done) && (
+              <TouchableOpacity
+                onPress={() => markAllDone(todayStr)}
+                activeOpacity={0.7}
+                style={styles.markAllBtn}
+              >
+                <Text style={styles.markAllText}>Mark all done</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
 
         {/* Priority filter badges — tapping one filters the task list */}
@@ -411,6 +423,17 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontFamily: FONTS.sansBold,
     color: P.textSoft,
+  },
+  markAllBtn: {
+    backgroundColor: P.plumLight,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  markAllText: {
+    fontSize: 11,
+    fontFamily: FONTS.sansBold,
+    color: P.plum,
   },
   emptyState: {
     alignItems: "center",
