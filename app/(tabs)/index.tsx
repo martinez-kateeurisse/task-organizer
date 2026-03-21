@@ -13,7 +13,7 @@ import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import EditTaskModal from "../../components/EditTaskModal";
 import TaskRow from "../../components/TaskRow";
 import { addDays, fmt, Task, TODAY } from "../../constants/data";
-import { FONTS, P } from "../../constants/theme";
+import { FONTS, P, PRIORITY } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
 
 // ─── DASHBOARD SCREEN ─────────────────────────────────────────────────────────
@@ -23,9 +23,17 @@ import { useTasks } from "../../context/TaskContext";
 export default function DashboardScreen() {
   const { tasks, toggleTask } = useTasks();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [priorityFilter, setPriorityFilter] = useState<
+    "all" | "high" | "medium" | "low"
+  >("all");
 
   const todayStr = fmt(TODAY);
-  const todayTasks = tasks.filter((t) => t.date === todayStr);
+  const allTodayTasks = tasks.filter((t) => t.date === todayStr);
+  // If a filter is active, only show tasks matching that priority
+  const todayTasks =
+    priorityFilter === "all"
+      ? allTodayTasks
+      : allTodayTasks.filter((t) => t.priority === priorityFilter);
   const done = todayTasks.filter((t) => t.done).length;
   const total = todayTasks.length;
   const pct = total === 0 ? 0 : done / total;
@@ -171,7 +179,39 @@ export default function DashboardScreen() {
         {/* Today task list */}
         <View style={styles.sectionHeader}>
           <Text style={styles.sectionTitle}>Today's Tasks</Text>
-          <Text style={styles.sectionCount}>{total} tasks</Text>
+          <Text style={styles.sectionCount}>{todayTasks.length} tasks</Text>
+        </View>
+
+        {/* Priority filter badges — tapping one filters the task list */}
+        <View style={styles.filterRow}>
+          {(["all", "high", "medium", "low"] as const).map((f) => {
+            const active = priorityFilter === f;
+            const color = f === "all" ? P.plum : PRIORITY[f].dot;
+            const bg = f === "all" ? P.plumLight : PRIORITY[f].bg;
+            return (
+              <TouchableOpacity
+                key={f}
+                onPress={() => setPriorityFilter(f)}
+                activeOpacity={0.7}
+                style={[
+                  styles.filterBadge,
+                  active && { backgroundColor: bg, borderColor: color },
+                ]}
+              >
+                {f !== "all" && (
+                  <View
+                    style={[
+                      styles.filterDot,
+                      { backgroundColor: active ? color : P.border },
+                    ]}
+                  />
+                )}
+                <Text style={[styles.filterText, active && { color }]}>
+                  {f === "all" ? "All" : PRIORITY[f].label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
         {todayTasks.length === 0 ? (
           <TouchableOpacity
@@ -345,6 +385,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: P.textSoft,
     fontFamily: FONTS.sans,
+  },
+  filterRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginBottom: 14,
+  },
+  filterBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    backgroundColor: P.white,
+  },
+  filterDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  filterText: {
+    fontSize: 12,
+    fontFamily: FONTS.sansBold,
+    color: P.textSoft,
   },
   emptyState: {
     alignItems: "center",
