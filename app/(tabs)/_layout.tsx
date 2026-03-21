@@ -1,6 +1,6 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
-import { ActivityIndicator, View } from "react-native";
+import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { FONTS, P } from "../../constants/theme";
 import { TaskProvider, useTasks } from "../../context/TaskContext";
 
@@ -10,6 +10,19 @@ import { TaskProvider, useTasks } from "../../context/TaskContext";
 //
 // Ionicons comes bundled with Expo — no install needed.
 // Each tab needs a `name` matching its filename in app/(tabs)/.
+
+// Separate inner component so it can call useTasks() which needs to be inside TaskProvider
+// Small red badge that sits on top of the tab icon showing pending task count
+function PendingBadge() {
+  const { tasks } = useTasks();
+  const count = tasks.filter((t) => !t.done).length;
+  if (count === 0) return null;
+  return (
+    <View style={styles.badge}>
+      <Text style={styles.badgeText}>{count > 99 ? "99+" : count}</Text>
+    </View>
+  );
+}
 
 // Separate inner component so it can call useTasks() which needs to be inside TaskProvider
 function TabsWithLoader() {
@@ -57,11 +70,15 @@ function TabsWithLoader() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons
-              name={focused ? "home" : "home-outline"}
-              size={22}
-              color={color}
-            />
+            <View>
+              <Ionicons
+                name={focused ? "home" : "home-outline"}
+                size={22}
+                color={color}
+              />
+              {/* Badge sits in the top-right corner of the icon using absolute positioning */}
+              <PendingBadge />
+            </View>
           ),
         }}
       />
@@ -120,6 +137,26 @@ function TabsWithLoader() {
     </Tabs>
   );
 }
+
+const styles = StyleSheet.create({
+  badge: {
+    position: "absolute",
+    top: -4,
+    right: -8,
+    backgroundColor: "#E53935", // standard notification red
+    borderRadius: 8,
+    minWidth: 16,
+    height: 16,
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 3,
+  },
+  badgeText: {
+    fontSize: 9,
+    fontFamily: FONTS.sansBold,
+    color: "white",
+  },
+});
 
 export default function TabLayout() {
   return (
