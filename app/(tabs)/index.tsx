@@ -2,17 +2,17 @@ import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import EditTaskModal from "../../components/EditTaskModal";
 import TaskRow from "../../components/TaskRow";
-import { fmt, Task, TODAY } from "../../constants/data";
+import { addDays, fmt, Task, TODAY } from "../../constants/data";
 import { FONTS, P } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
 
@@ -44,6 +44,16 @@ export default function DashboardScreen() {
   const hr = TODAY.getHours();
   const greeting =
     hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : "Good evening";
+
+  // Upcoming tasks — due in the next 3 days, excluding today, not yet done
+  // We build an array of the next 3 date strings and filter tasks against them
+  const upcomingTasks = tasks
+    .filter((t) => {
+      if (t.done) return false;
+      const next3 = [1, 2, 3].map((n) => fmt(addDays(TODAY, n)));
+      return next3.includes(t.date);
+    })
+    .sort((a, b) => a.date.localeCompare(b.date)); // sort by nearest date first
 
   const statChips = [
     {
@@ -182,6 +192,26 @@ export default function DashboardScreen() {
               onEdit={setEditingTask}
             />
           ))
+        )}
+
+        {/* Upcoming tasks — only shown if there are tasks in the next 3 days */}
+        {upcomingTasks.length > 0 && (
+          <>
+            <View style={[styles.sectionHeader, { marginTop: 28 }]}>
+              <Text style={styles.sectionTitle}>Coming Up</Text>
+              <Text style={styles.sectionCount}>
+                {upcomingTasks.length} tasks
+              </Text>
+            </View>
+            {upcomingTasks.map((t) => (
+              <TaskRow
+                key={t.id}
+                task={t}
+                onToggle={toggleTask}
+                onEdit={setEditingTask}
+              />
+            ))}
+          </>
         )}
       </ScrollView>
 
