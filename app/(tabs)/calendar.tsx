@@ -1,14 +1,15 @@
 import { router } from "expo-router";
 import { useState } from "react";
 import {
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import EditTaskModal from "../../components/EditTaskModal";
+import TaskDetailModal from "../../components/TaskDetailModal";
 import TaskRow from "../../components/TaskRow";
 import { fmt, Task, TODAY } from "../../constants/data";
 import { FONTS, P } from "../../constants/theme";
@@ -21,10 +22,10 @@ import { useTasks } from "../../context/TaskContext";
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function CalendarScreen() {
-  const { tasks, toggleTask } = useTasks();
+  const { tasks, toggleTask, deleteTask } = useTasks();
   const [selectedDate, setSelectedDate] = useState(fmt(TODAY));
   const [editingTask, setEditingTask] = useState<Task | null>(null);
-
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
   const year = TODAY.getFullYear();
   const month = TODAY.getMonth();
   const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
@@ -165,6 +166,7 @@ export default function CalendarScreen() {
               task={t}
               onToggle={toggleTask}
               onEdit={setEditingTask}
+              onDetail={setDetailTask}
             />
           ))
         )}
@@ -172,6 +174,18 @@ export default function CalendarScreen() {
         <EditTaskModal
           task={editingTask}
           onClose={() => setEditingTask(null)}
+        />
+        <TaskDetailModal
+          task={detailTask}
+          onClose={() => setDetailTask(null)}
+          onEdit={(task) => {
+            setDetailTask(null);
+            setEditingTask(task);
+          }}
+          onDelete={(task) => {
+            setDetailTask(null);
+            deleteTask(task.id);
+          }}
         />
       </ScrollView>
     </SafeAreaView>

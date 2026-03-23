@@ -11,6 +11,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import EditTaskModal from "../../components/EditTaskModal";
+import TaskDetailModal from "../../components/TaskDetailModal";
 import TaskRow from "../../components/TaskRow";
 import { addDays, fmt, Task, TODAY } from "../../constants/data";
 import { FONTS, P, PRIORITY } from "../../constants/theme";
@@ -21,8 +22,9 @@ import { useTasks } from "../../context/TaskContext";
 // useTasks() pulls tasks and toggleTask from TaskContext — no props needed.
 
 export default function DashboardScreen() {
-  const { tasks, toggleTask, markAllDone } = useTasks();
+  const { tasks, toggleTask, markAllDone, deleteTask } = useTasks();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [detailTask, setDetailTask] = useState<Task | null>(null);
   const [priorityFilter, setPriorityFilter] = useState<
     "all" | "high" | "medium" | "low"
   >("all");
@@ -242,6 +244,7 @@ export default function DashboardScreen() {
               task={t}
               onToggle={toggleTask}
               onEdit={setEditingTask}
+              onDetail={setDetailTask}
             />
           ))
         )}
@@ -261,6 +264,7 @@ export default function DashboardScreen() {
                 task={t}
                 onToggle={toggleTask}
                 onEdit={setEditingTask}
+                onDetail={setDetailTask}
               />
             ))}
           </>
@@ -269,6 +273,18 @@ export default function DashboardScreen() {
 
       {/* EditTaskModal sits outside ScrollView so it overlays the whole screen */}
       <EditTaskModal task={editingTask} onClose={() => setEditingTask(null)} />
+      <TaskDetailModal
+        task={detailTask}
+        onClose={() => setDetailTask(null)}
+        onEdit={(task) => {
+          setDetailTask(null);
+          setEditingTask(task);
+        }}
+        onDelete={(task) => {
+          setDetailTask(null);
+          deleteTask(task.id);
+        }}
+      />
     </SafeAreaView>
   );
 }

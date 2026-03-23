@@ -17,10 +17,11 @@ import { useTasks } from "../context/TaskContext";
 interface Props {
   task: Task;
   onToggle: (id: number) => void;
-  onEdit: (task: Task) => void; // called when the user taps ⋯ — passes the full task up
+  onEdit: (task: Task) => void;
+  onDetail: (task: Task) => void; // opens the read-only detail modal
 }
 
-export default function TaskRow({ task, onToggle, onEdit }: Props) {
+export default function TaskRow({ task, onToggle, onEdit, onDetail }: Props) {
   const pr = PRIORITY[task.priority];
   const ca = CATEGORY[task.category] ?? { bg: P.plumLight, text: P.plum };
   const { deleteTask } = useTasks();
@@ -97,9 +98,9 @@ export default function TaskRow({ task, onToggle, onEdit }: Props) {
           </Text>
         </View>
 
-        {/* ⋯ menu button */}
+        {/* ⋯ button — opens read-only task details */}
         <TouchableOpacity
-          onPress={() => onEdit(task)}
+          onPress={() => onDetail(task)}
           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
           style={styles.menuBtn}
         >
