@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -5,6 +6,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -25,6 +27,7 @@ export default function DashboardScreen() {
   const { tasks, toggleTask, markAllDone, deleteTask } = useTasks();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
   const [priorityFilter, setPriorityFilter] = useState<
     "all" | "high" | "medium" | "low"
   >("all");
@@ -65,6 +68,14 @@ export default function DashboardScreen() {
     })
     .sort((a, b) => a.date.localeCompare(b.date)); // sort by nearest date first
 
+  // When search is active, filter all tasks by title (case-insensitive)
+  const isSearching = searchQuery.trim().length > 0;
+  const searchResults = isSearching
+    ? tasks.filter((t) =>
+        t.title.toLowerCase().includes(searchQuery.toLowerCase()),
+      )
+    : [];
+
   const statChips = [
     {
       label: "Pending",
@@ -91,6 +102,31 @@ export default function DashboardScreen() {
         <View style={styles.header}>
           <Text style={styles.dateText}>{dateStr}</Text>
           <Text style={styles.greeting}>{greeting} 🌿</Text>
+        </View>
+
+        {/* Search bar */}
+        <View style={styles.searchContainer}>
+          <Ionicons
+            name="search-outline"
+            size={16}
+            color={P.textSoft}
+            style={styles.searchIcon}
+          />
+          <TextInput
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search tasks..."
+            placeholderTextColor={P.textSoft}
+            style={styles.searchInput}
+            returnKeyType="search"
+            clearButtonMode="while-editing" // iOS only — shows an X to clear
+          />
+          {/* Clear button for Android */}
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery("")}>
+              <Ionicons name="close-circle" size={16} color={P.textSoft} />
+            </TouchableOpacity>
+          )}
         </View>
 
         {/* Progress card — LinearGradient replaces CSS radial-gradient */}
@@ -166,107 +202,146 @@ export default function DashboardScreen() {
           </View>
         </LinearGradient>
 
-        {/* Stat chips row */}
-        <View style={styles.chipsRow}>
-          {statChips.map((s) => (
-            <View key={s.label} style={styles.chip}>
-              <Text style={[styles.chipValue, { color: s.color }]}>
-                {s.value}
+        {/* ── Search results — replaces normal layout when searching ── */}
+        {isSearching && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Results</Text>
+              <Text style={styles.sectionCount}>
+                {searchResults.length} tasks
               </Text>
-              <Text style={styles.chipLabel}>{s.label}</Text>
             </View>
-          ))}
-        </View>
-
-        {/* Today task list */}
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Today's Tasks</Text>
-          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-            <Text style={styles.sectionCount}>{todayTasks.length} tasks</Text>
-            {/* Only show the button when there are incomplete tasks today */}
-            {allTodayTasks.some((t) => !t.done) && (
-              <TouchableOpacity
-                onPress={() => markAllDone(todayStr)}
-                activeOpacity={0.7}
-                style={styles.markAllBtn}
-              >
-                <Text style={styles.markAllText}>Mark all done</Text>
-              </TouchableOpacity>
-            )}
-          </View>
-        </View>
-
-        {/* Priority filter badges — tapping one filters the task list */}
-        <View style={styles.filterRow}>
-          {(["all", "high", "medium", "low"] as const).map((f) => {
-            const active = priorityFilter === f;
-            const color = f === "all" ? P.plum : PRIORITY[f].dot;
-            const bg = f === "all" ? P.plumLight : PRIORITY[f].bg;
-            return (
-              <TouchableOpacity
-                key={f}
-                onPress={() => setPriorityFilter(f)}
-                activeOpacity={0.7}
-                style={[
-                  styles.filterBadge,
-                  active && { backgroundColor: bg, borderColor: color },
-                ]}
-              >
-                {f !== "all" && (
-                  <View
-                    style={[
-                      styles.filterDot,
-                      { backgroundColor: active ? color : P.border },
-                    ]}
-                  />
-                )}
-                <Text style={[styles.filterText, active && { color }]}>
-                  {f === "all" ? "All" : PRIORITY[f].label}
+            {searchResults.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Text style={styles.emptyEmoji}>🔍</Text>
+                <Text style={styles.emptyTitle}>No tasks found</Text>
+                <Text style={styles.emptySubtitle}>
+                  Try a different search term
                 </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-        {todayTasks.length === 0 ? (
-          <TouchableOpacity
-            style={styles.emptyState}
-            activeOpacity={0.7}
-            onPress={() => router.push("/(tabs)/add-task")}
-          >
-            <Text style={styles.emptyEmoji}>🌿</Text>
-            <Text style={styles.emptyTitle}>No tasks for today</Text>
-            <Text style={styles.emptySubtitle}>Tap here to add one</Text>
-          </TouchableOpacity>
-        ) : (
-          todayTasks.map((t) => (
-            <TaskRow
-              key={t.id}
-              task={t}
-              onToggle={toggleTask}
-              onEdit={setEditingTask}
-              onDetail={setDetailTask}
-            />
-          ))
+              </View>
+            ) : (
+              searchResults.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  task={t}
+                  onToggle={toggleTask}
+                  onEdit={setEditingTask}
+                  onDetail={setDetailTask}
+                />
+              ))
+            )}
+          </>
         )}
 
-        {/* Upcoming tasks — only shown if there are tasks in the next 3 days */}
-        {upcomingTasks.length > 0 && (
+        {/* ── Normal layout — hidden while searching ── */}
+        {!isSearching && (
           <>
-            <View style={[styles.sectionHeader, { marginTop: 28 }]}>
-              <Text style={styles.sectionTitle}>Coming Up</Text>
-              <Text style={styles.sectionCount}>
-                {upcomingTasks.length} tasks
-              </Text>
+            <View style={styles.chipsRow}>
+              {statChips.map((s) => (
+                <View key={s.label} style={styles.chip}>
+                  <Text style={[styles.chipValue, { color: s.color }]}>
+                    {s.value}
+                  </Text>
+                  <Text style={styles.chipLabel}>{s.label}</Text>
+                </View>
+              ))}
             </View>
-            {upcomingTasks.map((t) => (
-              <TaskRow
-                key={t.id}
-                task={t}
-                onToggle={toggleTask}
-                onEdit={setEditingTask}
-                onDetail={setDetailTask}
-              />
-            ))}
+
+            {/* Today task list */}
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Today's Tasks</Text>
+              <View
+                style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
+              >
+                <Text style={styles.sectionCount}>
+                  {todayTasks.length} tasks
+                </Text>
+                {/* Only show the button when there are incomplete tasks today */}
+                {allTodayTasks.some((t) => !t.done) && (
+                  <TouchableOpacity
+                    onPress={() => markAllDone(todayStr)}
+                    activeOpacity={0.7}
+                    style={styles.markAllBtn}
+                  >
+                    <Text style={styles.markAllText}>Mark all done</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            </View>
+
+            {/* Priority filter badges — tapping one filters the task list */}
+            <View style={styles.filterRow}>
+              {(["all", "high", "medium", "low"] as const).map((f) => {
+                const active = priorityFilter === f;
+                const color = f === "all" ? P.plum : PRIORITY[f].dot;
+                const bg = f === "all" ? P.plumLight : PRIORITY[f].bg;
+                return (
+                  <TouchableOpacity
+                    key={f}
+                    onPress={() => setPriorityFilter(f)}
+                    activeOpacity={0.7}
+                    style={[
+                      styles.filterBadge,
+                      active && { backgroundColor: bg, borderColor: color },
+                    ]}
+                  >
+                    {f !== "all" && (
+                      <View
+                        style={[
+                          styles.filterDot,
+                          { backgroundColor: active ? color : P.border },
+                        ]}
+                      />
+                    )}
+                    <Text style={[styles.filterText, active && { color }]}>
+                      {f === "all" ? "All" : PRIORITY[f].label}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            {todayTasks.length === 0 ? (
+              <TouchableOpacity
+                style={styles.emptyState}
+                activeOpacity={0.7}
+                onPress={() => router.push("/(tabs)/add-task")}
+              >
+                <Text style={styles.emptyEmoji}>🌿</Text>
+                <Text style={styles.emptyTitle}>No tasks for today</Text>
+                <Text style={styles.emptySubtitle}>Tap here to add one</Text>
+              </TouchableOpacity>
+            ) : (
+              todayTasks.map((t) => (
+                <TaskRow
+                  key={t.id}
+                  task={t}
+                  onToggle={toggleTask}
+                  onEdit={setEditingTask}
+                  onDetail={setDetailTask}
+                />
+              ))
+            )}
+
+            {/* Upcoming tasks — only shown if there are tasks in the next 3 days */}
+            {upcomingTasks.length > 0 && (
+              <>
+                <View style={[styles.sectionHeader, { marginTop: 28 }]}>
+                  <Text style={styles.sectionTitle}>Coming Up</Text>
+                  <Text style={styles.sectionCount}>
+                    {upcomingTasks.length} tasks
+                  </Text>
+                </View>
+                {upcomingTasks.map((t) => (
+                  <TaskRow
+                    key={t.id}
+                    task={t}
+                    onToggle={toggleTask}
+                    onEdit={setEditingTask}
+                    onDetail={setDetailTask}
+                  />
+                ))}
+              </>
+            )}
           </>
         )}
       </ScrollView>
@@ -468,4 +543,24 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   emptySubtitle: { fontSize: 13, fontFamily: FONTS.sans, color: P.textSoft },
+  searchContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: P.white,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 16,
+    gap: 8,
+  },
+  searchIcon: { flexShrink: 0 },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: FONTS.sans,
+    color: P.textDark,
+    padding: 0, // removes default TextInput padding on Android
+  },
 });
