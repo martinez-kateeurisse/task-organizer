@@ -1,17 +1,18 @@
 import {
-    CormorantGaramond_600SemiBold,
-    CormorantGaramond_700Bold,
+  CormorantGaramond_600SemiBold,
+  CormorantGaramond_700Bold,
 } from "@expo-google-fonts/cormorant-garamond";
 import {
-    Jost_400Regular,
-    Jost_500Medium,
-    Jost_600SemiBold,
-    Jost_700Bold,
+  Jost_400Regular,
+  Jost_500Medium,
+  Jost_600SemiBold,
+  Jost_700Bold,
 } from "@expo-google-fonts/jost";
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { requestPermission } from "../utils/notifications";
 
 // ─── ROOT LAYOUT ──────────────────────────────────────────────────────────────
@@ -43,5 +44,9 @@ export default function RootLayout() {
   // Return null while fonts are loading — splash screen stays visible
   if (!loaded) return null;
 
-  return <Stack screenOptions={{ headerShown: false }} />;
+  return (
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <Stack screenOptions={{ headerShown: false }} />
+    </GestureHandlerRootView>
+  );
 }

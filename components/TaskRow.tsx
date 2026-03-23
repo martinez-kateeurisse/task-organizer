@@ -1,6 +1,9 @@
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { fmt, Task, TODAY } from "../constants/data";
+import { Ionicons } from "@expo/vector-icons";
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import Swipeable from "react-native-gesture-handler/Swipeable";
+import { Task } from "../constants/data";
 import { CATEGORY, FONTS, P, PRIORITY } from "../constants/theme";
+import { useTasks } from "../context/TaskContext";
 
 // ─── TASK ROW ─────────────────────────────────────────────────────────────────
 // A tappable task card used on Dashboard and Calendar screens.
@@ -20,75 +23,90 @@ interface Props {
 export default function TaskRow({ task, onToggle, onEdit }: Props) {
   const pr = PRIORITY[task.priority];
   const ca = CATEGORY[task.category] ?? { bg: P.plumLight, text: P.plum };
+  const { deleteTask } = useTasks();
 
-  // A task is overdue if its date is before today and it isn't done yet
-  const isOverdue = !task.done && task.date < fmt(TODAY);
+  // Two action buttons revealed when the user swipes left
+  function renderRightActions() {
+    return (
+      <View style={styles.actionsContainer}>
+        {/* Edit button — opens the EditTaskModal */}
+        <TouchableOpacity
+          style={styles.editAction}
+          onPress={() => onEdit(task)}
+        >
+          <Ionicons name="pencil" size={18} color={P.plum} />
+          <Text style={styles.editActionText}>Edit</Text>
+        </TouchableOpacity>
 
-  // Format the date for display — e.g. "Mar 12"
-  const dateLabel = new Date(task.date + "T12:00:00").toLocaleDateString(
-    "en-US",
-    {
-      month: "short",
-      day: "numeric",
-    },
-  );
+        {/* Delete button — shows confirmation before deleting */}
+        <TouchableOpacity
+          style={styles.deleteAction}
+          onPress={() => {
+            Alert.alert(
+              "Delete Task",
+              `Are you sure you want to delete "${task.title}"?`,
+              [
+                { text: "Cancel", style: "cancel" },
+                {
+                  text: "Delete",
+                  style: "destructive",
+                  onPress: () => deleteTask(task.id),
+                },
+              ],
+            );
+          }}
+        >
+          <Ionicons name="trash" size={18} color="#E53935" />
+          <Text style={styles.deleteActionText}>Delete</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
-    <TouchableOpacity
-      onPress={() => onToggle(task.id)}
-      activeOpacity={0.75} // how faded the card looks while pressed
-      style={[styles.row, task.done && styles.rowDone]}
+    <Swipeable
+      renderRightActions={renderRightActions}
+      rightThreshold={40}
+      overshootRight={false}
     >
-      {/* Circular checkbox — filled with plum when done */}
-      <View style={[styles.checkbox, task.done && styles.checkboxDone]}>
-        {task.done && (
-          // ✓ drawn as two lines via border trick — avoids needing an SVG icon
-          <View style={styles.checkmark} />
-        )}
-      </View>
-
-      {/* Small colored dot showing priority level */}
-      <View style={[styles.priorityDot, { backgroundColor: pr.dot }]} />
-
-      {/* Task title — line-through when done */}
-      <Text
-        style={[styles.title, task.done && styles.titleDone]}
-        numberOfLines={1}
-      >
-        {task.title}
-      </Text>
-
-      {/* Category badge */}
-      <View style={[styles.badge, { backgroundColor: ca.bg }]}>
-        <Text style={[styles.badgeText, { color: ca.text }]}>
-          {task.category}
-        </Text>
-      </View>
-
-      {/* ⋯ menu button — tapping opens the EditTaskModal.
-          stopPropagation is not needed here; onPress on a child doesn't bubble in RN */}
-      {/* Due date badge — red if overdue, soft lilac if upcoming */}
-      <View style={[styles.dateBadge, isOverdue && styles.dateBadgeOverdue]}>
-        <Text
-          style={[
-            styles.dateBadgeText,
-            isOverdue && styles.dateBadgeTextOverdue,
-          ]}
-        >
-          {isOverdue ? "⚠ " : ""}
-          {dateLabel}
-        </Text>
-      </View>
-
-      {/* ⋯ menu button */}
       <TouchableOpacity
-        onPress={() => onEdit(task)}
-        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-        style={styles.menuBtn}
+        onPress={() => onToggle(task.id)}
+        activeOpacity={0.75}
+        style={[styles.row, task.done && styles.rowDone]}
       >
-        <Text style={styles.menuDots}>⋯</Text>
+        {/* Circular checkbox — filled with plum when done */}
+        <View style={[styles.checkbox, task.done && styles.checkboxDone]}>
+          {task.done && <View style={styles.checkmark} />}
+        </View>
+
+        {/* Small colored dot showing priority level */}
+        <View style={[styles.priorityDot, { backgroundColor: pr.dot }]} />
+
+        {/* Task title — line-through when done */}
+        <Text
+          style={[styles.title, task.done && styles.titleDone]}
+          numberOfLines={1}
+        >
+          {task.title}
+        </Text>
+
+        {/* Category badge */}
+        <View style={[styles.badge, { backgroundColor: ca.bg }]}>
+          <Text style={[styles.badgeText, { color: ca.text }]}>
+            {task.category}
+          </Text>
+        </View>
+
+        {/* ⋯ menu button */}
+        <TouchableOpacity
+          onPress={() => onEdit(task)}
+          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          style={styles.menuBtn}
+        >
+          <Text style={styles.menuDots}>⋯</Text>
+        </TouchableOpacity>
       </TouchableOpacity>
-    </TouchableOpacity>
+    </Swipeable>
   );
 }
 
@@ -183,5 +201,40 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: P.textSoft,
     letterSpacing: -1,
+  },
+  actionsContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingLeft: 8,
+    marginBottom: 8,
+  },
+  editAction: {
+    backgroundColor: P.plumLight,
+    justifyContent: "center",
+    alignItems: "center",
+    width: 70,
+    height: "100%",
+    borderRadius: 16,
+    gap: 4,
+  },
+  editActionText: {
+    color: P.plum,
+    fontFamily: FONTS.sansBold,
+    fontSize: 11,
+  },
+  deleteAction: {
+    backgroundColor: "#FDECEA",
+    justifyContent: "center",
+    alignItems: "center",
+    width: 70,
+    height: "100%",
+    borderRadius: 16,
+    gap: 4,
+  },
+  deleteActionText: {
+    color: "#E53935",
+    fontFamily: FONTS.sansBold,
+    fontSize: 11,
   },
 });
