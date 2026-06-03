@@ -31,14 +31,36 @@ export default function DashboardScreen() {
   const [priorityFilter, setPriorityFilter] = useState<
     "all" | "high" | "medium" | "low"
   >("all");
+  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "done">(
+    "all",
+  );
+  const [sortBy, setSortBy] = useState<"date" | "priority" | "title">("date");
 
   const todayStr = fmt(TODAY);
   const allTodayTasks = tasks.filter((t) => t.date === todayStr);
   // If a filter is active, only show tasks matching that priority
-  const todayTasks =
-    priorityFilter === "all"
-      ? allTodayTasks
-      : allTodayTasks.filter((t) => t.priority === priorityFilter);
+  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
+
+  const todayTasks = allTodayTasks
+    // apply priority filter
+    .filter((t) =>
+      priorityFilter === "all" ? true : t.priority === priorityFilter,
+    )
+    // apply status filter
+    .filter((t) =>
+      statusFilter === "all"
+        ? true
+        : statusFilter === "done"
+          ? t.done
+          : !t.done,
+    )
+    // apply sort
+    .sort((a, b) => {
+      if (sortBy === "priority")
+        return priorityOrder[a.priority] - priorityOrder[b.priority];
+      if (sortBy === "title") return a.title.localeCompare(b.title);
+      return a.date.localeCompare(b.date); // default: sort by date
+    });
   const done = todayTasks.filter((t) => t.done).length;
   const total = todayTasks.length;
   const pct = total === 0 ? 0 : done / total;
@@ -269,7 +291,7 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            {/* Priority filter badges — tapping one filters the task list */}
+            {/* Priority filter badges */}
             <View style={styles.filterRow}>
               {(["all", "high", "medium", "low"] as const).map((f) => {
                 const active = priorityFilter === f;
@@ -300,6 +322,71 @@ export default function DashboardScreen() {
                 );
               })}
             </View>
+
+            {/* Status filter + Sort row */}
+            <View style={styles.filterRow}>
+              {/* Status filter */}
+              {(["all", "pending", "done"] as const).map((s) => {
+                const active = statusFilter === s;
+                const labels = { all: "All", pending: "Pending", done: "Done" };
+                return (
+                  <TouchableOpacity
+                    key={s}
+                    onPress={() => setStatusFilter(s)}
+                    activeOpacity={0.7}
+                    style={[
+                      styles.filterBadge,
+                      active && {
+                        backgroundColor: P.plumLight,
+                        borderColor: P.plum,
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.filterText, active && { color: P.plum }]}
+                    >
+                      {labels[s]}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* Spacer */}
+              <View style={{ flex: 1 }} />
+
+              {/* Sort button */}
+              <TouchableOpacity
+                onPress={() => {
+                  const options: Array<"date" | "priority" | "title"> = [
+                    "date",
+                    "priority",
+                    "title",
+                  ];
+                  const next =
+                    options[(options.indexOf(sortBy) + 1) % options.length];
+                  setSortBy(next);
+                }}
+                activeOpacity={0.7}
+                style={[
+                  styles.filterBadge,
+                  { borderColor: P.lavender, backgroundColor: "#EDE8F7" },
+                ]}
+              >
+                <Ionicons
+                  name="swap-vertical-outline"
+                  size={12}
+                  color={P.lavender}
+                />
+                <Text style={[styles.filterText, { color: P.lavender }]}>
+                  {sortBy === "date"
+                    ? "By Date"
+                    : sortBy === "priority"
+                      ? "By Priority"
+                      : "By Title"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
             {todayTasks.length === 0 ? (
               <TouchableOpacity
                 style={styles.emptyState}
