@@ -2,6 +2,12 @@
 export type Priority = "high" | "medium" | "low";
 export type Category = "Work" | "Personal" | "Health";
 
+export interface Subtask {
+  id: number;
+  title: string;
+  done: boolean;
+}
+
 export interface Task {
   id: number;
   title: string;
@@ -9,7 +15,14 @@ export interface Task {
   priority: Priority;
   date: string; // 'YYYY-MM-DD'
   category: Category;
+  // Optional so tasks saved to AsyncStorage before these fields existed still parse as valid Tasks
+  notes?: string;
+  subtasks?: Subtask[];
+  tags?: string[];
 }
+
+// Shape of the user-editable fields — what add/update forms produce
+export type TaskInput = Omit<Task, "id" | "done">;
 
 export interface Reminder {
   id: number;

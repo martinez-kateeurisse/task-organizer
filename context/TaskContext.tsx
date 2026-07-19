@@ -6,7 +6,7 @@ import {
   useEffect,
   useState,
 } from "react";
-import { Category, INITIAL_TASKS, Priority, Task } from "../constants/data";
+import { INITIAL_TASKS, Task, TaskInput } from "../constants/data";
 
 // ─── CONTEXT TYPE ─────────────────────────────────────────────────────────────
 // Describes all the data and actions that every screen can access.
@@ -14,21 +14,8 @@ interface TaskContextType {
   tasks: Task[];
   loading: boolean;
   toggleTask: (id: number) => void;
-  addTask: (task: {
-    title: string;
-    priority: Priority;
-    category: Category;
-    date: string;
-  }) => void;
-  updateTask: (
-    id: number,
-    updates: {
-      title: string;
-      priority: Priority;
-      category: Category;
-      date: string;
-    },
-  ) => void;
+  addTask: (task: TaskInput) => void;
+  updateTask: (id: number, updates: Partial<TaskInput>) => void;
   deleteTask: (id: number) => void;
   markAllDone: (todayStr: string) => void;
 }
@@ -73,9 +60,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         // storage write failed — silently ignore for now
       }
     }
-    // Only save once the initial load has run (avoids overwriting storage with [])
-    if (tasks.length > 0) saveTasks();
-  }, [tasks]);
+    // Only save once the initial load has run (avoids overwriting storage with []).
+    // Guarding on loading (not tasks.length) so deleting the last task still persists.
+    if (!loading) saveTasks();
+  }, [tasks, loading]);
 
   // Flip a task's done state by its id
   function toggleTask(id: number) {
@@ -85,25 +73,12 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   }
 
   // Append a new task; id is a timestamp so it's always unique
-  function addTask(task: {
-    title: string;
-    priority: Priority;
-    category: Category;
-    date: string;
-  }) {
+  function addTask(task: TaskInput) {
     setTasks((prev) => [...prev, { ...task, id: Date.now(), done: false }]);
   }
 
   // Merge updated fields into the matching task, leaving id and done untouched
-  function updateTask(
-    id: number,
-    updates: {
-      title: string;
-      priority: Priority;
-      category: Category;
-      date: string;
-    },
-  ) {
+  function updateTask(id: number, updates: Partial<TaskInput>) {
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     );

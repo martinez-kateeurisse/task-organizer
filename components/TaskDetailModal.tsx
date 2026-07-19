@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import {
     Alert,
     Modal,
+    ScrollView,
     StyleSheet,
     Text,
     TouchableOpacity,
@@ -35,6 +36,9 @@ export default function TaskDetailModal({
 
   const pr = PRIORITY[task.priority];
   const ca = CATEGORY[task.category];
+  const subtasks = task.subtasks ?? [];
+  const tags = task.tags ?? [];
+  const subDone = subtasks.filter((s) => s.done).length;
   const dateLabel = new Date(task.date + "T12:00:00").toLocaleDateString(
     "en-US",
     {
@@ -63,6 +67,7 @@ export default function TaskDetailModal({
         {/* Drag handle */}
         <View style={styles.handle} />
 
+        <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerLabel}>Task Details</Text>
@@ -133,7 +138,61 @@ export default function TaskDetailModal({
           </View>
         </View>
 
-        {/* Hint */}
+        {/* Notes — only when the task has any */}
+        {!!task.notes && (
+          <>
+            <Text style={styles.sectionLabel}>Notes</Text>
+            <View style={styles.notesCard}>
+              <Text style={styles.notesText}>{task.notes}</Text>
+            </View>
+          </>
+        )}
+
+        {/* Subtasks — read-only list with progress count */}
+        {subtasks.length > 0 && (
+          <>
+            <Text style={styles.sectionLabel}>
+              Subtasks · {subDone}/{subtasks.length}
+            </Text>
+            <View style={styles.subtasksCard}>
+              {subtasks.map((st, i) => (
+                <View key={st.id}>
+                  {i > 0 && <View style={styles.divider} />}
+                  <View style={styles.subtaskRow}>
+                    <Ionicons
+                      name={st.done ? "checkmark-circle" : "ellipse-outline"}
+                      size={16}
+                      color={st.done ? P.sage : P.lavender}
+                    />
+                    <Text
+                      style={[
+                        styles.subtaskText,
+                        st.done && styles.subtaskTextDone,
+                      ]}
+                    >
+                      {st.title}
+                    </Text>
+                  </View>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
+        {/* Tags */}
+        {tags.length > 0 && (
+          <>
+            <Text style={styles.sectionLabel}>Tags</Text>
+            <View style={styles.tagsWrap}>
+              {tags.map((tag) => (
+                <View key={tag} style={styles.tagChip}>
+                  <Text style={styles.tagChipText}>{tag}</Text>
+                </View>
+              ))}
+            </View>
+          </>
+        )}
+
         {/* Action buttons */}
         <View style={styles.btnRow}>
           <TouchableOpacity
@@ -173,6 +232,7 @@ export default function TaskDetailModal({
             <Text style={styles.editBtnText}>Edit Task</Text>
           </TouchableOpacity>
         </View>
+        </ScrollView>
       </View>
     </Modal>
   );
@@ -193,6 +253,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    maxHeight: "90%",
   },
   handle: {
     width: 40,
@@ -278,6 +339,65 @@ const styles = StyleSheet.create({
   divider: {
     height: 1,
     backgroundColor: P.border,
+  },
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: FONTS.sansBold,
+    color: P.textSoft,
+    textTransform: "uppercase",
+    letterSpacing: 1,
+    marginBottom: 8,
+  },
+  notesCard: {
+    backgroundColor: P.lilac,
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 20,
+  },
+  notesText: {
+    fontSize: 14,
+    fontFamily: FONTS.sans,
+    color: P.textDark,
+    lineHeight: 20,
+  },
+  subtasksCard: {
+    backgroundColor: P.lilac,
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    marginBottom: 20,
+  },
+  subtaskRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingVertical: 12,
+  },
+  subtaskText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: FONTS.sans,
+    color: P.textDark,
+  },
+  subtaskTextDone: {
+    textDecorationLine: "line-through",
+    color: P.textSoft,
+  },
+  tagsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 20,
+  },
+  tagChip: {
+    backgroundColor: P.lavenderLight,
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+  },
+  tagChipText: {
+    fontSize: 12,
+    fontFamily: FONTS.sansBold,
+    color: P.lavender,
   },
   btnRow: {
     flexDirection: "row",

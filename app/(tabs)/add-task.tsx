@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
     DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
@@ -12,7 +13,11 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type { Category, Priority as PriorityType } from "../../constants/data";
+import type {
+    Category,
+    Priority as PriorityType,
+    Subtask,
+} from "../../constants/data";
 import { fmt, TODAY } from "../../constants/data";
 import { CATEGORY, FONTS, P, PRIORITY } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
@@ -30,6 +35,11 @@ export default function AddTaskScreen() {
   const [dueDate, setDueDate] = useState<Date>(new Date(TODAY));
   const [showPicker, setShowPicker] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [subtaskInput, setSubtaskInput] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
 
   // Called by DateTimePicker when the user picks a date.
   // On Android the picker closes itself; on iOS we close it manually.
@@ -38,13 +48,44 @@ export default function AddTaskScreen() {
     if (selected) setDueDate(selected);
   }
 
+  function addSubtask() {
+    const t = subtaskInput.trim();
+    if (t) setSubtasks((prev) => [...prev, { id: Date.now(), title: t, done: false }]);
+    setSubtaskInput("");
+  }
+
+  function commitTag(raw: string) {
+    const t = raw.trim();
+    if (t && !tags.includes(t)) setTags((prev) => [...prev, t]);
+    setTagInput("");
+  }
+
+  // Typing a comma commits the tag immediately, like most tag inputs
+  function onTagChange(text: string) {
+    if (text.endsWith(",")) commitTag(text.slice(0, -1));
+    else setTagInput(text);
+  }
+
   function handleSubmit() {
     if (!title.trim()) return;
-    addTask({ title: title.trim(), priority, category, date: fmt(dueDate) });
+    addTask({
+      title: title.trim(),
+      priority,
+      category,
+      date: fmt(dueDate),
+      notes: notes.trim(),
+      subtasks,
+      tags,
+    });
     setTitle("");
     setPriority("medium");
     setCategory("Work");
     setDueDate(new Date(TODAY));
+    setNotes("");
+    setSubtasks([]);
+    setSubtaskInput("");
+    setTags([]);
+    setTagInput("");
     setSuccess(true);
     setTimeout(() => setSuccess(false), 2200);
   }
@@ -81,6 +122,19 @@ export default function AddTaskScreen() {
             placeholderTextColor={P.textSoft}
             style={styles.input}
             returnKeyType="done"
+          />
+        </View>
+
+        {/* Notes */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Notes</Text>
+          <TextInput
+            value={notes}
+            onChangeText={setNotes}
+            placeholder="Any extra details… (optional)"
+            placeholderTextColor={P.textSoft}
+            style={[styles.input, styles.notesInput]}
+            multiline
           />
         </View>
 
@@ -186,6 +240,77 @@ export default function AddTaskScreen() {
           )}
         </View>
 
+        {/* Subtasks — list of added items plus an inline add row */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Subtasks</Text>
+          {subtasks.map((st) => (
+            <View key={st.id} style={styles.subtaskRow}>
+              <Ionicons name="ellipse-outline" size={14} color={P.lavender} />
+              <Text style={styles.subtaskText}>{st.title}</Text>
+              <TouchableOpacity
+                onPress={() =>
+                  setSubtasks((prev) => prev.filter((s) => s.id !== st.id))
+                }
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <Ionicons name="close-circle" size={18} color={P.textSoft} />
+              </TouchableOpacity>
+            </View>
+          ))}
+          <View style={styles.inlineAddRow}>
+            <TextInput
+              value={subtaskInput}
+              onChangeText={setSubtaskInput}
+              placeholder="Add a subtask…"
+              placeholderTextColor={P.textSoft}
+              style={[styles.input, styles.inlineAddInput]}
+              onSubmitEditing={addSubtask}
+              returnKeyType="done"
+              submitBehavior="submit"
+            />
+            <TouchableOpacity
+              onPress={addSubtask}
+              activeOpacity={0.7}
+              style={styles.inlineAddBtn}
+            >
+              <Ionicons name="add" size={22} color={P.plum} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Tags — comma or return commits a chip; tap a chip to remove it */}
+        <View style={styles.field}>
+          <Text style={styles.label}>Tags</Text>
+          {tags.length > 0 && (
+            <View style={styles.tagsWrap}>
+              {tags.map((tag) => (
+                <TouchableOpacity
+                  key={tag}
+                  onPress={() =>
+                    setTags((prev) => prev.filter((t) => t !== tag))
+                  }
+                  activeOpacity={0.7}
+                  style={styles.tagChip}
+                >
+                  <Text style={styles.tagChipText}>{tag}</Text>
+                  <Ionicons name="close" size={12} color={P.lavender} />
+                </TouchableOpacity>
+              ))}
+            </View>
+          )}
+          <TextInput
+            value={tagInput}
+            onChangeText={onTagChange}
+            onSubmitEditing={() => commitTag(tagInput)}
+            placeholder="Type a tag, press comma or return…"
+            placeholderTextColor={P.textSoft}
+            style={styles.input}
+            returnKeyType="done"
+            submitBehavior="submit"
+            autoCapitalize="none"
+          />
+        </View>
+
         {/* Submit button */}
         <TouchableOpacity
           onPress={handleSubmit}
@@ -263,6 +388,59 @@ const styles = StyleSheet.create({
   },
   dateBtnIcon: { fontSize: 16 },
   dateBtnText: { fontSize: 15, fontFamily: FONTS.serif, color: P.textDark },
+
+  notesInput: {
+    minHeight: 80,
+    textAlignVertical: "top", // Android centers multiline text without this
+  },
+  subtaskRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: P.white,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  subtaskText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: FONTS.serif,
+    color: P.textDark,
+  },
+  inlineAddRow: { flexDirection: "row", gap: 8, alignItems: "center" },
+  inlineAddInput: { flex: 1 },
+  inlineAddBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: P.plumLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tagsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+  tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: P.lavenderLight,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  tagChipText: {
+    fontSize: 12,
+    fontFamily: FONTS.sansBold,
+    color: P.lavender,
+  },
 
   toggleRow: { flexDirection: "row", gap: 8 },
   toggleBtn: {

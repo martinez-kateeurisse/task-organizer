@@ -8,6 +8,7 @@ export const P = {
   mossGrey: "#70786A",
   white: "#FFFFFF",
   plumLight: "#EDE6F6",
+  lavenderLight: "#EDE8F7",
   sageLight: "#EBF3E3",
   textDark: "#2E1F3E",
   textMid: "#6B5F7A",
@@ -33,13 +34,18 @@ export const PRIORITY: Record<
   { dot: string; bg: string; text: string; label: string }
 > = {
   high: { dot: P.plum, bg: P.plumLight, text: P.plum, label: "High" },
-  medium: { dot: P.lavender, bg: "#EDE8F7", text: P.lavender, label: "Medium" },
+  medium: {
+    dot: P.lavender,
+    bg: P.lavenderLight,
+    text: P.lavender,
+    label: "Medium",
+  },
   low: { dot: P.sage, bg: P.sageLight, text: "#5C8040", label: "Low" },
 };
 
 // ─── CATEGORY STYLES ──────────────────────────────────────────────────────────
 export const CATEGORY: Record<string, { bg: string; text: string }> = {
   Work: { bg: P.plumLight, text: P.plum },
-  Personal: { bg: "#EDE8F7", text: "#7B52AB" },
+  Personal: { bg: P.lavenderLight, text: "#7B52AB" },
   Health: { bg: P.sageLight, text: "#5C8040" },
 };

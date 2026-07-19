@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
     DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
@@ -6,13 +7,14 @@ import {
     Alert,
     Modal,
     Platform,
+    ScrollView,
     StyleSheet,
     Text,
     TextInput,
     TouchableOpacity,
     View,
 } from "react-native";
-import { Category, fmt, Priority, Task } from "../constants/data";
+import { Category, fmt, Priority, Subtask, Task } from "../constants/data";
 import { CATEGORY, FONTS, P, PRIORITY } from "../constants/theme";
 import { useTasks } from "../context/TaskContext";
 
@@ -38,6 +40,11 @@ export default function EditTaskModal({ task, onClose }: Props) {
   const [category, setCategory] = useState<Category>("Work");
   const [dueDate, setDueDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState(false);
+  const [notes, setNotes] = useState("");
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
+  const [subtaskInput, setSubtaskInput] = useState("");
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagInput, setTagInput] = useState("");
 
   // Pre-fill all fields when a task is passed in.
   // Adding T12:00:00 prevents timezone shift that can move the date back by one day.
@@ -48,8 +55,36 @@ export default function EditTaskModal({ task, onClose }: Props) {
       setCategory(task.category);
       setDueDate(new Date(task.date + "T12:00:00"));
       setShowPicker(false);
+      setNotes(task.notes ?? "");
+      setSubtasks(task.subtasks ?? []);
+      setSubtaskInput("");
+      setTags(task.tags ?? []);
+      setTagInput("");
     }
   }, [task]);
+
+  function addSubtask() {
+    const t = subtaskInput.trim();
+    if (t) setSubtasks((prev) => [...prev, { id: Date.now(), title: t, done: false }]);
+    setSubtaskInput("");
+  }
+
+  function toggleSubtask(id: number) {
+    setSubtasks((prev) =>
+      prev.map((s) => (s.id === id ? { ...s, done: !s.done } : s)),
+    );
+  }
+
+  function commitTag(raw: string) {
+    const t = raw.trim();
+    if (t && !tags.includes(t)) setTags((prev) => [...prev, t]);
+    setTagInput("");
+  }
+
+  function onTagChange(text: string) {
+    if (text.endsWith(",")) commitTag(text.slice(0, -1));
+    else setTagInput(text);
+  }
 
   function onDateChange(event: DateTimePickerEvent, selected?: Date) {
     if (Platform.OS === "android") setShowPicker(false);
@@ -63,6 +98,9 @@ export default function EditTaskModal({ task, onClose }: Props) {
       priority,
       category,
       date: fmt(dueDate),
+      notes: notes.trim(),
+      subtasks,
+      tags,
     });
     onClose();
   }
@@ -117,6 +155,11 @@ export default function EditTaskModal({ task, onClose }: Props) {
           </TouchableOpacity>
         </View>
 
+        {/* Scrollable so the sheet still fits on screen with the new fields */}
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+        >
         {/* Task name */}
         <Text style={styles.label}>Task Name</Text>
         <TextInput
@@ -125,6 +168,17 @@ export default function EditTaskModal({ task, onClose }: Props) {
           style={styles.input}
           placeholderTextColor={P.textSoft}
           returnKeyType="done"
+        />
+
+        {/* Notes */}
+        <Text style={styles.label}>Notes</Text>
+        <TextInput
+          value={notes}
+          onChangeText={setNotes}
+          placeholder="Any extra details… (optional)"
+          placeholderTextColor={P.textSoft}
+          style={[styles.input, styles.notesInput]}
+          multiline
         />
 
         {/* Priority toggle */}
@@ -222,6 +276,85 @@ export default function EditTaskModal({ task, onClose }: Props) {
           />
         )}
 
+        {/* Subtasks — tap the circle to toggle, X to remove */}
+        <Text style={styles.label}>Subtasks</Text>
+        {subtasks.map((st) => (
+          <View key={st.id} style={styles.subtaskRow}>
+            <TouchableOpacity
+              onPress={() => toggleSubtask(st.id)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons
+                name={st.done ? "checkmark-circle" : "ellipse-outline"}
+                size={18}
+                color={st.done ? P.sage : P.lavender}
+              />
+            </TouchableOpacity>
+            <Text
+              style={[styles.subtaskText, st.done && styles.subtaskTextDone]}
+            >
+              {st.title}
+            </Text>
+            <TouchableOpacity
+              onPress={() =>
+                setSubtasks((prev) => prev.filter((s) => s.id !== st.id))
+              }
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Ionicons name="close-circle" size={18} color={P.textSoft} />
+            </TouchableOpacity>
+          </View>
+        ))}
+        <View style={styles.inlineAddRow}>
+          <TextInput
+            value={subtaskInput}
+            onChangeText={setSubtaskInput}
+            placeholder="Add a subtask…"
+            placeholderTextColor={P.textSoft}
+            style={[styles.input, styles.inlineAddInput]}
+            onSubmitEditing={addSubtask}
+            returnKeyType="done"
+            submitBehavior="submit"
+          />
+          <TouchableOpacity
+            onPress={addSubtask}
+            activeOpacity={0.7}
+            style={styles.inlineAddBtn}
+          >
+            <Ionicons name="add" size={22} color={P.plum} />
+          </TouchableOpacity>
+        </View>
+
+        {/* Tags — comma or return commits a chip; tap a chip to remove it */}
+        <Text style={styles.label}>Tags</Text>
+        {tags.length > 0 && (
+          <View style={styles.tagsWrap}>
+            {tags.map((tag) => (
+              <TouchableOpacity
+                key={tag}
+                onPress={() => setTags((prev) => prev.filter((t) => t !== tag))}
+                activeOpacity={0.7}
+                style={styles.tagChip}
+              >
+                <Text style={styles.tagChipText}>{tag}</Text>
+                <Ionicons name="close" size={12} color={P.lavender} />
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
+        <TextInput
+          value={tagInput}
+          onChangeText={onTagChange}
+          onSubmitEditing={() => commitTag(tagInput)}
+          placeholder="Type a tag, press comma or return…"
+          placeholderTextColor={P.textSoft}
+          style={styles.input}
+          returnKeyType="done"
+          submitBehavior="submit"
+          autoCapitalize="none"
+        />
+        </ScrollView>
+
         {/* Action buttons */}
         <View style={styles.btnRow}>
           <TouchableOpacity
@@ -260,6 +393,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
+    maxHeight: "90%",
   },
   handle: {
     width: 40,
@@ -312,6 +446,67 @@ const styles = StyleSheet.create({
   },
   dateBtnIcon: { fontSize: 16 },
   dateBtnText: { fontSize: 15, fontFamily: FONTS.serif, color: P.textDark },
+
+  notesInput: {
+    minHeight: 70,
+    textAlignVertical: "top",
+  },
+  subtaskRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: P.lilac,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    marginBottom: 8,
+  },
+  subtaskText: {
+    flex: 1,
+    fontSize: 14,
+    fontFamily: FONTS.serif,
+    color: P.textDark,
+  },
+  subtaskTextDone: {
+    textDecorationLine: "line-through",
+    color: P.textSoft,
+  },
+  inlineAddRow: {
+    flexDirection: "row",
+    gap: 8,
+    alignItems: "flex-start",
+  },
+  inlineAddInput: { flex: 1 },
+  inlineAddBtn: {
+    width: 46,
+    height: 46,
+    borderRadius: 14,
+    backgroundColor: P.plumLight,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  tagsWrap: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+  tagChip: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: P.lavenderLight,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+  },
+  tagChipText: {
+    fontSize: 12,
+    fontFamily: FONTS.sansBold,
+    color: P.lavender,
+  },
 
   toggleRow: { flexDirection: "row", gap: 8, marginBottom: 18 },
   toggleBtn: {

@@ -25,6 +25,8 @@ export default function TaskRow({ task, onToggle, onEdit, onDetail }: Props) {
   const pr = PRIORITY[task.priority];
   const ca = CATEGORY[task.category] ?? { bg: P.plumLight, text: P.plum };
   const { deleteTask } = useTasks();
+  const subtasks = task.subtasks ?? [];
+  const subDone = subtasks.filter((s) => s.done).length;
 
   // Two action buttons revealed when the user swipes left
   function renderRightActions() {
@@ -90,6 +92,21 @@ export default function TaskRow({ task, onToggle, onEdit, onDetail }: Props) {
         >
           {task.title}
         </Text>
+
+        {/* Subtask progress — only when the task has subtasks */}
+        {subtasks.length > 0 && (
+          <View style={styles.metaBadge}>
+            <Ionicons name="list-outline" size={11} color={P.textMid} />
+            <Text style={styles.metaText}>
+              {subDone}/{subtasks.length}
+            </Text>
+          </View>
+        )}
+
+        {/* Notes indicator */}
+        {!!task.notes && (
+          <Ionicons name="document-text-outline" size={13} color={P.textSoft} />
+        )}
 
         {/* Category badge */}
         <View style={[styles.badge, { backgroundColor: ca.bg }]}>
@@ -166,6 +183,20 @@ const styles = StyleSheet.create({
   titleDone: {
     textDecorationLine: "line-through", // RN uses textDecorationLine, not textDecoration
     color: P.textSoft,
+  },
+  metaBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: P.lilac,
+    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+  },
+  metaText: {
+    fontSize: 10,
+    fontFamily: FONTS.sansBold,
+    color: P.textMid,
   },
   badge: {
     paddingHorizontal: 9,
