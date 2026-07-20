@@ -13,6 +13,8 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
+import { ProfileProvider } from "../context/ProfileContext";
+import { TaskProvider } from "../context/TaskContext";
 import { requestPermission } from "../utils/notifications";
 
 // ─── ROOT LAYOUT ──────────────────────────────────────────────────────────────
@@ -45,8 +47,14 @@ export default function RootLayout() {
   if (!loaded) return null;
 
   return (
+    // Providers sit above the navigator so routes outside the tab group —
+    // the settings stack — share the same task and profile state.
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <TaskProvider>
+        <ProfileProvider>
+          <Stack screenOptions={{ headerShown: false }} />
+        </ProfileProvider>
+      </TaskProvider>
     </GestureHandlerRootView>
   );
 }

@@ -2,8 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { FONTS, P } from "../../constants/theme";
-import { ProfileProvider } from "../../context/ProfileContext";
-import { TaskProvider, useTasks } from "../../context/TaskContext";
+import { useTasks } from "../../context/TaskContext";
 
 // ─── TAB LAYOUT ───────────────────────────────────────────────────────────────
 // Registers all 5 tabs and wraps them in TaskProvider so every screen
@@ -159,12 +158,7 @@ const styles = StyleSheet.create({
   },
 });
 
+// Providers now live in the root layout so the settings stack shares them.
 export default function TabLayout() {
-  return (
-    <TaskProvider>
-      <ProfileProvider>
-        <TabsWithLoader />
-      </ProfileProvider>
-    </TaskProvider>
-  );
+  return <TabsWithLoader />;
 }
