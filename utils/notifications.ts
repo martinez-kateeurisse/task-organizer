@@ -1,4 +1,5 @@
 import * as Notifications from "expo-notifications";
+import { Task } from "../constants/data";
 
 // ─── NOTIFICATION BEHAVIOUR ───────────────────────────────────────────────────
 // This tells the app how to display a notification when it arrives while the
@@ -82,5 +83,59 @@ export async function scheduleReminder(
 export async function cancelReminder(identifiers: string[]): Promise<void> {
   for (const id of identifiers) {
     await Notifications.cancelScheduledNotificationAsync(id);
+  }
+}
+
+// ─── PER-TASK REMINDERS ───────────────────────────────────────────────────────
+// A task's reminder fires once, at `reminderTime` on its due `date`.
+//
+// The notification id is derived from the task id rather than stored on the
+// task. That makes scheduling idempotent: rescheduling overwrites the previous
+// notification for that task, and cancelling never needs a lookup.
+const taskReminderId = (taskId: number) => `taskly-task-${taskId}`;
+
+// Combines 'YYYY-MM-DD' and 'HH:MM' into a local Date.
+// Built from numeric parts rather than parsing a string, because
+// `new Date('2026-07-20T09:00')` is treated as UTC on some engines.
+export function reminderDate(date: string, time: string): Date | null {
+  const [y, m, d] = date.split("-").map(Number);
+  const [hh, mm] = time.split(":").map(Number);
+  if ([y, m, d, hh, mm].some((n) => Number.isNaN(n))) return null;
+  return new Date(y, m - 1, d, hh, mm, 0, 0);
+}
+
+export async function cancelTaskReminder(taskId: number): Promise<void> {
+  try {
+    await Notifications.cancelScheduledNotificationAsync(taskReminderId(taskId));
+  } catch {
+    // No notification scheduled under that id — nothing to cancel.
+  }
+}
+
+// Cancels any existing reminder for the task, then schedules a fresh one if the
+// task still warrants it. Completed tasks and past instants are skipped, so a
+// task whose date has slipped by never fires a notification retroactively.
+export async function syncTaskReminder(task: Task): Promise<void> {
+  await cancelTaskReminder(task.id);
+
+  if (!task.reminderTime || task.done) return;
+  const when = reminderDate(task.date, task.reminderTime);
+  if (!when || when.getTime() <= Date.now()) return;
+
+  try {
+    await Notifications.scheduleNotificationAsync({
+      identifier: taskReminderId(task.id),
+      content: {
+        title: "🌿 Task Reminder",
+        body: task.title,
+        sound: true,
+      },
+      trigger: {
+        type: Notifications.SchedulableTriggerInputTypes.DATE,
+        date: when,
+      },
+    });
+  } catch {
+    // Permission denied or scheduling unavailable — the task itself still saves.
   }
 }

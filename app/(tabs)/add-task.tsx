@@ -14,6 +14,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import ManageCategoriesModal from "../../components/ManageCategoriesModal";
+import ReminderField from "../../components/ReminderField";
 import type { Priority as PriorityType, Subtask } from "../../constants/data";
 import { fmt, TODAY } from "../../constants/data";
 import { categoryStyle, FONTS, P, PRIORITY } from "../../constants/theme";
@@ -46,6 +47,7 @@ export default function AddTaskScreen() {
   const [subtaskInput, setSubtaskInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [reminderTime, setReminderTime] = useState<string | undefined>();
 
   // Called by DateTimePicker when the user picks a date.
   // On Android the picker closes itself; on iOS we close it manually.
@@ -82,6 +84,7 @@ export default function AddTaskScreen() {
       notes: notes.trim(),
       subtasks,
       tags,
+      reminderTime,
     });
     setTitle("");
     setPriority("medium");
@@ -92,6 +95,7 @@ export default function AddTaskScreen() {
     setSubtaskInput("");
     setTags([]);
     setTagInput("");
+    setReminderTime(undefined);
     setSuccess(true);
     setTimeout(() => setSuccess(false), 2200);
   }
@@ -255,6 +259,13 @@ export default function AddTaskScreen() {
             />
           )}
         </View>
+
+        {/* Reminder — a time on the due date above */}
+        <ReminderField
+          value={reminderTime}
+          onChange={setReminderTime}
+          dueDate={dueDate}
+        />
 
         {/* Subtasks — list of added items plus an inline add row */}
         <View style={styles.field}>

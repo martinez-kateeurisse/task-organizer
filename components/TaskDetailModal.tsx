@@ -11,6 +11,7 @@ import {
 import { Task } from "../constants/data";
 import { categoryStyle, FONTS, P, PRIORITY } from "../constants/theme";
 import { useTasks } from "../context/TaskContext";
+import { formatReminder } from "./ReminderField";
 
 // ─── TASK DETAIL MODAL ────────────────────────────────────────────────────────
 // Read-only bottom sheet showing a task's full details.
@@ -141,6 +142,19 @@ export default function TaskDetailModal({
             <Text style={styles.detailLabel}>Due Date</Text>
             <Text style={styles.detailValue}>📅 {dateLabel}</Text>
           </View>
+
+          {/* Reminder — only when one is set */}
+          {!!task.reminderTime && (
+            <>
+              <View style={styles.divider} />
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Reminder</Text>
+                <Text style={styles.detailValue}>
+                  🔔 {formatReminder(task.reminderTime)}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
 
         {/* Notes — only when the task has any */}

@@ -18,6 +18,7 @@ import { fmt, Priority, Subtask, Task } from "../constants/data";
 import { categoryStyle, FONTS, P, PRIORITY } from "../constants/theme";
 import { useTasks } from "../context/TaskContext";
 import ManageCategoriesModal from "./ManageCategoriesModal";
+import ReminderField from "./ReminderField";
 
 // ─── EDIT TASK MODAL ──────────────────────────────────────────────────────────
 // Slides up over the current screen when the user taps ⋯ on a task row.
@@ -47,6 +48,7 @@ export default function EditTaskModal({ task, onClose }: Props) {
   const [subtaskInput, setSubtaskInput] = useState("");
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
+  const [reminderTime, setReminderTime] = useState<string | undefined>();
 
   // Pre-fill all fields when a task is passed in.
   // Adding T12:00:00 prevents timezone shift that can move the date back by one day.
@@ -62,6 +64,7 @@ export default function EditTaskModal({ task, onClose }: Props) {
       setSubtaskInput("");
       setTags(task.tags ?? []);
       setTagInput("");
+      setReminderTime(task.reminderTime);
     }
   }, [task]);
 
@@ -111,6 +114,7 @@ export default function EditTaskModal({ task, onClose }: Props) {
       notes: notes.trim(),
       subtasks,
       tags,
+      reminderTime,
     });
     onClose();
   }
@@ -295,6 +299,13 @@ export default function EditTaskModal({ task, onClose }: Props) {
             accentColor={P.plum}
           />
         )}
+
+        {/* Reminder — a time on the due date above */}
+        <ReminderField
+          value={reminderTime}
+          onChange={setReminderTime}
+          dueDate={dueDate}
+        />
 
         {/* Subtasks — tap the circle to toggle, X to remove */}
         <Text style={styles.label}>Subtasks</Text>

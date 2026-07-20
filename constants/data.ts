@@ -24,6 +24,10 @@ export interface Task {
   notes?: string;
   subtasks?: Subtask[];
   tags?: string[];
+  // 'HH:MM' 24-hour, paired with `date` to form the reminder instant.
+  // Undefined means no reminder. The scheduled notification's id is derived
+  // from the task id, so it never needs storing here.
+  reminderTime?: string;
 }
 
 // Shape of the user-editable fields — what add/update forms produce

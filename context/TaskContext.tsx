@@ -13,6 +13,7 @@ import {
   Task,
   TaskInput,
 } from "../constants/data";
+import { cancelTaskReminder, syncTaskReminder } from "../utils/notifications";
 
 // ─── CONTEXT TYPE ─────────────────────────────────────────────────────────────
 // Describes all the data and actions that every screen can access.
@@ -57,12 +58,17 @@ export function TaskProvider({ children }: { children: ReactNode }) {
           AsyncStorage.getItem(STORAGE_KEY),
           AsyncStorage.getItem(CATEGORIES_KEY),
         ]);
-        setTasks(storedTasks !== null ? JSON.parse(storedTasks) : INITIAL_TASKS);
+        const loadedTasks: Task[] =
+          storedTasks !== null ? JSON.parse(storedTasks) : INITIAL_TASKS;
+        setTasks(loadedTasks);
         setCategories(
           storedCategories !== null
             ? JSON.parse(storedCategories)
             : INITIAL_CATEGORIES,
         );
+        // Notifications live in the OS, not in storage, so they can drift while
+        // the app is closed. Re-syncing on launch makes the schedule match.
+        loadedTasks.forEach((t) => syncTaskReminder(t));
       } catch {
         setTasks(INITIAL_TASKS);
         setCategories(INITIAL_CATEGORIES);
@@ -101,8 +107,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
     if (!loading) saveCategories();
   }, [categories, loading]);
 
-  // Flip a task's done state by its id
+  // Every mutation below re-syncs the OS notification for the affected tasks.
+  // syncTaskReminder is idempotent and decides for itself whether a reminder is
+  // still warranted, so callers just hand it the task's new state.
+
+  // Flip a task's done state by its id.
+  // Completing a task cancels its reminder; un-completing restores it.
   function toggleTask(id: number) {
+    const target = tasks.find((t) => t.id === id);
+    if (target) syncTaskReminder({ ...target, done: !target.done });
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
     );
@@ -110,11 +123,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   // Append a new task; id is a timestamp so it's always unique
   function addTask(task: TaskInput) {
-    setTasks((prev) => [...prev, { ...task, id: Date.now(), done: false }]);
+    const created: Task = { ...task, id: Date.now(), done: false };
+    setTasks((prev) => [...prev, created]);
+    syncTaskReminder(created);
   }
 
   // Merge updated fields into the matching task, leaving id and done untouched
   function updateTask(id: number, updates: Partial<TaskInput>) {
+    const target = tasks.find((t) => t.id === id);
+    if (target) syncTaskReminder({ ...target, ...updates });
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, ...updates } : t)),
     );
@@ -122,11 +139,15 @@ export function TaskProvider({ children }: { children: ReactNode }) {
 
   // filter returns every task except the one with the matching id — effectively deleting it
   function deleteTask(id: number) {
+    cancelTaskReminder(id);
     setTasks((prev) => prev.filter((t) => t.id !== id));
   }
 
   // sets done: true only on tasks due today
   function markAllDone(todayStr: string) {
+    tasks
+      .filter((t) => t.date === todayStr && !t.done)
+      .forEach((t) => syncTaskReminder({ ...t, done: true }));
     setTasks((prev) =>
       prev.map((t) => (t.date === todayStr ? { ...t, done: true } : t)),
     );

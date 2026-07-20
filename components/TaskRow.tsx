@@ -110,6 +110,11 @@ export default function TaskRow({ task, onToggle, onEdit, onDetail }: Props) {
           <Ionicons name="document-text-outline" size={13} color={P.textSoft} />
         )}
 
+        {/* Reminder indicator */}
+        {!!task.reminderTime && (
+          <Ionicons name="notifications-outline" size={13} color={P.lavender} />
+        )}
+
         {/* Category badge */}
         <View style={[styles.badge, { backgroundColor: ca.bg }]}>
           <Text style={[styles.badgeText, { color: ca.text }]}>
