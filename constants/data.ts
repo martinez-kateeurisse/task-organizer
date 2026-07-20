@@ -29,6 +29,11 @@ export interface Task {
 // Shape of the user-editable fields — what add/update forms produce
 export type TaskInput = Omit<Task, "id" | "done">;
 
+export interface Profile {
+  name: string;
+  email: string;
+}
+
 export interface Reminder {
   id: number;
   title: string;
@@ -49,6 +54,25 @@ export const addDays = (d: Date, n: number): Date => {
 };
 
 export const TODAY = new Date();
+
+// ─── PROFILE ──────────────────────────────────────────────────────────────────
+export const INITIAL_PROFILE: Profile = {
+  name: "Master Keyt",
+  email: "master.keyt@email.com",
+};
+
+// initials: derived from the name so it can never fall out of sync with it.
+// Takes the first letter of the first two words; falls back to a leaf for blanks.
+export const initials = (name: string): string => {
+  const letters = name
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0].toUpperCase())
+    .join("");
+  return letters || "🌿";
+};
 
 // ─── DEFAULT CATEGORIES ───────────────────────────────────────────────────────
 export const INITIAL_CATEGORIES: Category[] = [

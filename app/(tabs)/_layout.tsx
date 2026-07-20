@@ -2,6 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
 import { FONTS, P } from "../../constants/theme";
+import { ProfileProvider } from "../../context/ProfileContext";
 import { TaskProvider, useTasks } from "../../context/TaskContext";
 
 // ─── TAB LAYOUT ───────────────────────────────────────────────────────────────
@@ -161,7 +162,9 @@ const styles = StyleSheet.create({
 export default function TabLayout() {
   return (
     <TaskProvider>
-      <TabsWithLoader />
+      <ProfileProvider>
+        <TabsWithLoader />
+      </ProfileProvider>
     </TaskProvider>
   );
 }

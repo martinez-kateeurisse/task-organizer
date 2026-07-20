@@ -10,8 +10,10 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
-import { INITIAL_REMINDERS, Reminder } from "../../constants/data";
+import EditProfileModal from "../../components/EditProfileModal";
+import { initials, INITIAL_REMINDERS, Reminder } from "../../constants/data";
 import { FONTS, P } from "../../constants/theme";
+import { useProfile } from "../../context/ProfileContext";
 import { cancelReminder, scheduleReminder } from "../../utils/notifications";
 
 // ─── PROFILE SCREEN ───────────────────────────────────────────────────────────
@@ -34,6 +36,8 @@ const SETTINGS = [
 ];
 
 export default function ProfileScreen() {
+  const { profile } = useProfile();
+  const [editingProfile, setEditingProfile] = useState(false);
   const [reminders, setReminders] = useState<Reminder[]>(INITIAL_REMINDERS);
   const [notifIds, setNotifIds] = useState<NotifIds>({});
 
@@ -75,17 +79,21 @@ export default function ProfileScreen() {
       >
         {/* ── Profile header card ─────────────────────────── */}
         <LinearGradient
-          colors={[P.plum, "#7B52AB"]}
+          colors={[P.plum, P.violet]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.profileCard}
         >
           <View style={styles.avatar}>
-            <Text style={styles.avatarText}>MK</Text>
+            <Text style={styles.avatarText}>{initials(profile.name)}</Text>
           </View>
           <View style={styles.profileInfo}>
-            <Text style={styles.profileName}>Master Keyt</Text>
-            <Text style={styles.profileEmail}>master.keyt@email.com</Text>
+            <Text style={styles.profileName} numberOfLines={1}>
+              {profile.name}
+            </Text>
+            <Text style={styles.profileEmail} numberOfLines={1}>
+              {profile.email || "No email set"}
+            </Text>
             <View style={styles.badgeRow}>
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>🔥 7-day streak</Text>
@@ -95,6 +103,23 @@ export default function ProfileScreen() {
               </View>
             </View>
           </View>
+
+          <TouchableOpacity
+            onPress={() => setEditingProfile(true)}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={styles.editProfileBtn}
+          >
+            <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
+              <Path
+                d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z"
+                stroke="white"
+                strokeWidth={1.9}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </Svg>
+          </TouchableOpacity>
         </LinearGradient>
 
         {/* ── Reminders section ───────────────────────────── */}
@@ -143,6 +168,11 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         ))}
       </ScrollView>
+
+      <EditProfileModal
+        visible={editingProfile}
+        onClose={() => setEditingProfile(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -184,6 +214,13 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.sans,
     color: "rgba(255,255,255,0.7)",
     marginTop: 2,
+  },
+  editProfileBtn: {
+    alignSelf: "flex-start",
+    backgroundColor: "rgba(255,255,255,0.18)",
+    borderRadius: 16,
+    padding: 8,
+    flexShrink: 0,
   },
   badgeRow: { flexDirection: "row", gap: 8, marginTop: 10 },
   badge: {
