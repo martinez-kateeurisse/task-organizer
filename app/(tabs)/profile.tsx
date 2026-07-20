@@ -1,4 +1,5 @@
 import { LinearGradient } from "expo-linear-gradient";
+import { router } from "expo-router";
 import { useState } from "react";
 import {
     ScrollView,
@@ -27,13 +28,14 @@ import { cancelReminder, scheduleReminder } from "../../utils/notifications";
 // We need these to cancel the right notifications when a toggle is turned off.
 type NotifIds = Record<number, string[]>;
 
+// Each row maps to a screen in the app/settings stack
 const SETTINGS = [
-  "Notifications",
-  "Appearance",
-  "Privacy",
-  "Help & Support",
-  "About Taskly",
-];
+  { label: "Notifications", route: "/settings/notifications" },
+  { label: "Appearance", route: "/settings/appearance" },
+  { label: "Privacy", route: "/settings/privacy" },
+  { label: "Help & Support", route: "/settings/help" },
+  { label: "About Taskly", route: "/settings/about" },
+] as const;
 
 export default function ProfileScreen() {
   const { profile } = useProfile();
@@ -151,11 +153,12 @@ export default function ProfileScreen() {
 
         {SETTINGS.map((item) => (
           <TouchableOpacity
-            key={item}
+            key={item.label}
             activeOpacity={0.7}
+            onPress={() => router.push(item.route)}
             style={styles.settingsRow}
           >
-            <Text style={styles.settingsText}>{item}</Text>
+            <Text style={styles.settingsText}>{item.label}</Text>
             <Svg width={16} height={16} viewBox="0 0 16 16" fill="none">
               <Path
                 d="M6 4l4 4-4 4"
