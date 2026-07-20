@@ -9,11 +9,14 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import EditTaskModal from "../../components/EditTaskModal";
+import SearchBar from "../../components/SearchBar";
 import TaskDetailModal from "../../components/TaskDetailModal";
+import TaskFilterBar from "../../components/TaskFilterBar";
 import TaskRow from "../../components/TaskRow";
 import { fmt, Task, TODAY } from "../../constants/data";
 import { FONTS, P } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
+import { useTaskFilters } from "../../hooks/useTaskFilters";
 
 // ─── CALENDAR SCREEN ──────────────────────────────────────────────────────────
 // A full month grid. Days with tasks show a small lavender dot.
@@ -26,6 +29,7 @@ export default function CalendarScreen() {
   const [selectedDate, setSelectedDate] = useState(fmt(TODAY));
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
+  const filters = useTaskFilters();
   const year = TODAY.getFullYear();
   const month = TODAY.getMonth();
   const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
@@ -41,7 +45,11 @@ export default function CalendarScreen() {
     return acc;
   }, {});
 
-  const selectedTasks = tasks.filter((t) => t.date === selectedDate);
+  // Search spans every date — finding a task you can't place on the calendar is
+  // the point — so results replace the day list while the grid stays visible.
+  const selectedTasks = filters.isSearching
+    ? filters.search(tasks)
+    : filters.apply(tasks.filter((t) => t.date === selectedDate));
 
   // Cells: leading nulls offset the first day to the right column; then day numbers
   const cells: (number | null)[] = [
@@ -66,6 +74,12 @@ export default function CalendarScreen() {
           <Text style={styles.title}>Calendar</Text>
           <Text style={styles.subtitle}>{monthName}</Text>
         </View>
+
+        <SearchBar
+          value={filters.searchQuery}
+          onChange={filters.setSearchQuery}
+          placeholder="Search all tasks..."
+        />
 
         {/* Month grid card */}
         <View style={styles.gridCard}>
@@ -134,31 +148,55 @@ export default function CalendarScreen() {
           ))}
         </View>
 
-        {/* Selected day task list */}
+        {/* Selected day task list — or search results when searching */}
         <View style={styles.dayHeader}>
           <View style={styles.dayAccent} />
           <Text style={styles.dayTitle}>
-            {new Date(selectedDate + "T12:00:00").toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "short",
-              day: "numeric",
-            })}
+            {filters.isSearching
+              ? "Results"
+              : new Date(selectedDate + "T12:00:00").toLocaleDateString(
+                  "en-US",
+                  {
+                    weekday: "long",
+                    month: "short",
+                    day: "numeric",
+                  },
+                )}
           </Text>
           <View style={styles.countBadge}>
             <Text style={styles.countText}>{selectedTasks.length}</Text>
           </View>
         </View>
 
+        <TaskFilterBar
+          priorityFilter={filters.priorityFilter}
+          onPriorityChange={filters.setPriorityFilter}
+          statusFilter={filters.statusFilter}
+          onStatusChange={filters.setStatusFilter}
+          sortBy={filters.sortBy}
+          onCycleSort={filters.cycleSort}
+        />
+
         {selectedTasks.length === 0 ? (
-          <TouchableOpacity
-            style={styles.emptyState}
-            activeOpacity={0.7}
-            onPress={() => router.push("/(tabs)/add-task")}
-          >
-            <Text style={styles.emptyEmoji}>🌿</Text>
-            <Text style={styles.emptyTitle}>No tasks for this day</Text>
-            <Text style={styles.emptySubtitle}>Tap here to add one</Text>
-          </TouchableOpacity>
+          filters.isSearching ? (
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyEmoji}>🔍</Text>
+              <Text style={styles.emptyTitle}>No tasks found</Text>
+              <Text style={styles.emptySubtitle}>
+                Try a different search term
+              </Text>
+            </View>
+          ) : (
+            <TouchableOpacity
+              style={styles.emptyState}
+              activeOpacity={0.7}
+              onPress={() => router.push("/(tabs)/add-task")}
+            >
+              <Text style={styles.emptyEmoji}>🌿</Text>
+              <Text style={styles.emptyTitle}>No tasks for this day</Text>
+              <Text style={styles.emptySubtitle}>Tap here to add one</Text>
+            </TouchableOpacity>
+          )
         ) : (
           selectedTasks.map((t) => (
             <TaskRow
