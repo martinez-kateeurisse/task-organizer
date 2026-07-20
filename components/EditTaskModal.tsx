@@ -14,9 +14,10 @@ import {
     TouchableOpacity,
     View,
 } from "react-native";
-import { Category, fmt, Priority, Subtask, Task } from "../constants/data";
-import { CATEGORY, FONTS, P, PRIORITY } from "../constants/theme";
+import { fmt, Priority, Subtask, Task } from "../constants/data";
+import { categoryStyle, FONTS, P, PRIORITY } from "../constants/theme";
 import { useTasks } from "../context/TaskContext";
+import ManageCategoriesModal from "./ManageCategoriesModal";
 
 // ─── EDIT TASK MODAL ──────────────────────────────────────────────────────────
 // Slides up over the current screen when the user taps ⋯ on a task row.
@@ -33,13 +34,14 @@ interface Props {
 }
 
 export default function EditTaskModal({ task, onClose }: Props) {
-  const { updateTask, deleteTask } = useTasks();
+  const { updateTask, deleteTask, categories } = useTasks();
 
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
-  const [category, setCategory] = useState<Category>("Work");
+  const [category, setCategory] = useState<string>("");
   const [dueDate, setDueDate] = useState<Date>(new Date());
   const [showPicker, setShowPicker] = useState(false);
+  const [showManage, setShowManage] = useState(false);
   const [notes, setNotes] = useState("");
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [subtaskInput, setSubtaskInput] = useState("");
@@ -62,6 +64,14 @@ export default function EditTaskModal({ task, onClose }: Props) {
       setTagInput("");
     }
   }, [task]);
+
+  // If the selected category was renamed or deleted in the manage modal,
+  // fall back to the first category so save never writes a stale name
+  useEffect(() => {
+    if (task && !categories.some((c) => c.name === category)) {
+      setCategory(categories[0]?.name ?? "");
+    }
+  }, [categories, category, task]);
 
   function addSubtask() {
     const t = subtaskInput.trim();
@@ -217,19 +227,28 @@ export default function EditTaskModal({ task, onClose }: Props) {
           })}
         </View>
 
-        {/* Category toggle */}
-        <Text style={styles.label}>Category</Text>
-        <View style={styles.toggleRow}>
-          {(["Work", "Personal", "Health"] as Category[]).map((cat) => {
-            const cc = CATEGORY[cat];
-            const active = category === cat;
+        {/* Category toggle — dynamic, with a link to manage categories */}
+        <View style={styles.labelRow}>
+          <Text style={[styles.label, styles.labelInline]}>Category</Text>
+          <TouchableOpacity
+            onPress={() => setShowManage(true)}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.manageLink}>Edit</Text>
+          </TouchableOpacity>
+        </View>
+        <View style={[styles.toggleRow, styles.wrapRow]}>
+          {categories.map((cat) => {
+            const cc = categoryStyle(cat.color);
+            const active = category === cat.name;
             return (
               <TouchableOpacity
-                key={cat}
-                onPress={() => setCategory(cat)}
+                key={cat.id}
+                onPress={() => setCategory(cat.name)}
                 activeOpacity={0.7}
                 style={[
                   styles.toggleBtn,
+                  styles.catToggleBtn,
                   { borderColor: active ? cc.text : P.border },
                   active && { backgroundColor: cc.bg },
                 ]}
@@ -239,8 +258,9 @@ export default function EditTaskModal({ task, onClose }: Props) {
                     styles.toggleText,
                     { color: active ? cc.text : P.textSoft },
                   ]}
+                  numberOfLines={1}
                 >
-                  {cat}
+                  {cat.name}
                 </Text>
               </TouchableOpacity>
             );
@@ -374,6 +394,12 @@ export default function EditTaskModal({ task, onClose }: Props) {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Nested modal — must live inside this Modal to stack above it */}
+      <ManageCategoriesModal
+        visible={showManage}
+        onClose={() => setShowManage(false)}
+      />
     </Modal>
   );
 }
@@ -419,6 +445,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
     marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  labelInline: { marginBottom: 0 },
+  manageLink: {
+    fontSize: 11,
+    fontFamily: FONTS.sansBold,
+    color: P.lavender,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   input: {
     backgroundColor: P.lilac,
@@ -509,6 +549,9 @@ const styles = StyleSheet.create({
   },
 
   toggleRow: { flexDirection: "row", gap: 8, marginBottom: 18 },
+  wrapRow: { flexWrap: "wrap" },
+  // flexBasis (not flex: 1) so rows actually wrap at ~3 buttons per line
+  catToggleBtn: { flexBasis: "30%", flexGrow: 1 },
   toggleBtn: {
     flex: 1,
     flexDirection: "row",

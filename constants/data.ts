@@ -1,6 +1,11 @@
 // ─── TYPES ────────────────────────────────────────────────────────────────────
 export type Priority = "high" | "medium" | "low";
-export type Category = "Work" | "Personal" | "Health";
+
+export interface Category {
+  id: number;
+  name: string;
+  color: string; // key into CATEGORY_COLORS in theme.ts
+}
 
 export interface Subtask {
   id: number;
@@ -14,7 +19,7 @@ export interface Task {
   done: boolean;
   priority: Priority;
   date: string; // 'YYYY-MM-DD'
-  category: Category;
+  category: string; // Category.name — old stored tasks already hold names, so no migration
   // Optional so tasks saved to AsyncStorage before these fields existed still parse as valid Tasks
   notes?: string;
   subtasks?: Subtask[];
@@ -44,6 +49,13 @@ export const addDays = (d: Date, n: number): Date => {
 };
 
 export const TODAY = new Date();
+
+// ─── DEFAULT CATEGORIES ───────────────────────────────────────────────────────
+export const INITIAL_CATEGORIES: Category[] = [
+  { id: 1, name: "Work", color: "plum" },
+  { id: 2, name: "Personal", color: "violet" },
+  { id: 3, name: "Health", color: "sage" },
+];
 
 // ─── SAMPLE TASKS ─────────────────────────────────────────────────────────────
 export const INITIAL_TASKS: Task[] = [

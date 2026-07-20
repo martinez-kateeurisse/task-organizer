@@ -10,6 +10,9 @@ export const P = {
   plumLight: "#EDE6F6",
   lavenderLight: "#EDE8F7",
   sageLight: "#EBF3E3",
+  violet: "#7B52AB",
+  sageDeep: "#5C8040",
+  danger: "#E53935",
   textDark: "#2E1F3E",
   textMid: "#6B5F7A",
   textSoft: "#A89CB8",
@@ -40,12 +43,20 @@ export const PRIORITY: Record<
     text: P.lavender,
     label: "Medium",
   },
-  low: { dot: P.sage, bg: P.sageLight, text: "#5C8040", label: "Low" },
+  low: { dot: P.sage, bg: P.sageLight, text: P.sageDeep, label: "Low" },
 };
 
-// ─── CATEGORY STYLES ──────────────────────────────────────────────────────────
-export const CATEGORY: Record<string, { bg: string; text: string }> = {
-  Work: { bg: P.plumLight, text: P.plum },
-  Personal: { bg: P.lavenderLight, text: "#7B52AB" },
-  Health: { bg: P.sageLight, text: "#5C8040" },
+// ─── CATEGORY COLORS ──────────────────────────────────────────────────────────
+// Swatches a user can assign to a category. Category.color stores one of these
+// keys, so user-created categories always resolve to palette colors.
+export const CATEGORY_COLORS: Record<string, { bg: string; text: string }> = {
+  plum: { bg: P.plumLight, text: P.plum },
+  violet: { bg: P.lavenderLight, text: P.violet },
+  lavender: { bg: P.lavenderLight, text: P.lavender },
+  sage: { bg: P.sageLight, text: P.sageDeep },
+  moss: { bg: P.sageLight, text: P.mossGrey },
 };
+
+// Safe lookup — falls back to plum for unknown/missing color keys
+export const categoryStyle = (color?: string) =>
+  CATEGORY_COLORS[color ?? ""] ?? CATEGORY_COLORS.plum;

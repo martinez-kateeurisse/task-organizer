@@ -9,7 +9,8 @@ import {
     View,
 } from "react-native";
 import { Task } from "../constants/data";
-import { CATEGORY, FONTS, P, PRIORITY } from "../constants/theme";
+import { categoryStyle, FONTS, P, PRIORITY } from "../constants/theme";
+import { useTasks } from "../context/TaskContext";
 
 // ─── TASK DETAIL MODAL ────────────────────────────────────────────────────────
 // Read-only bottom sheet showing a task's full details.
@@ -32,10 +33,14 @@ export default function TaskDetailModal({
   onEdit,
   onDelete,
 }: Props) {
+  // Hook must run unconditionally, so it sits above the early return
+  const { categories } = useTasks();
   if (!task) return null;
 
   const pr = PRIORITY[task.priority];
-  const ca = CATEGORY[task.category];
+  const ca = categoryStyle(
+    categories.find((c) => c.name === task.category)?.color,
+  );
   const subtasks = task.subtasks ?? [];
   const tags = task.tags ?? [];
   const subDone = subtasks.filter((s) => s.done).length;
@@ -92,12 +97,12 @@ export default function TaskDetailModal({
           <Ionicons
             name={task.done ? "checkmark-circle" : "time-outline"}
             size={14}
-            color={task.done ? "#5C8040" : P.plum}
+            color={task.done ? P.sageDeep : P.plum}
           />
           <Text
             style={[
               styles.statusText,
-              { color: task.done ? "#5C8040" : P.plum },
+              { color: task.done ? P.sageDeep : P.plum },
             ]}
           >
             {task.done ? "Completed" : "Pending"}

@@ -3,7 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import { TODAY, addDays, fmt } from "../../constants/data";
-import { CATEGORY, FONTS, P } from "../../constants/theme";
+import { categoryStyle, FONTS, P } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
 
 // ─── STATS SCREEN ─────────────────────────────────────────────────────────────
@@ -11,7 +11,7 @@ import { useTasks } from "../../context/TaskContext";
 // No hardcoded data — weekly chart and streak both reflect actual history.
 
 export default function StatsScreen() {
-  const { tasks } = useTasks();
+  const { tasks, categories } = useTasks();
 
   // ── Overall completion rate ───────────────────────────────────────────────
   const totalDone = tasks.filter((t) => t.done).length;
@@ -51,12 +51,13 @@ export default function StatsScreen() {
 
   const maxTotal = Math.max(...weeklyStats.map((d) => d.total), 1); // min 1 avoids divide-by-zero
 
-  // ── Per-category stats ────────────────────────────────────────────────────
-  const catStats = (["Work", "Personal", "Health"] as const).map((cat) => {
-    const catTasks = tasks.filter((t) => t.category === cat);
+  // ── Per-category stats — driven by the user's category list ──────────────
+  const catStats = categories.map((c) => {
+    const catTasks = tasks.filter((t) => t.category === c.name);
     const catDone = catTasks.filter((t) => t.done).length;
     return {
-      cat,
+      cat: c.name,
+      color: categoryStyle(c.color).text,
       done: catDone,
       total: catTasks.length,
       pct:
@@ -208,27 +209,24 @@ export default function StatsScreen() {
         {/* ── Row 3: Category breakdown ────────────────────────── */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>By Category</Text>
-          {catStats.map((cs) => {
-            const cc = CATEGORY[cs.cat];
-            return (
-              <View key={cs.cat} style={styles.catRow}>
-                <View style={styles.catMeta}>
-                  <Text style={styles.catName}>{cs.cat}</Text>
-                  <Text style={styles.catCount}>
-                    {cs.done}/{cs.total}
-                  </Text>
-                </View>
-                <View style={styles.catTrack}>
-                  <View
-                    style={[
-                      styles.catFill,
-                      { width: `${cs.pct}%` as any, backgroundColor: cc.text },
-                    ]}
-                  />
-                </View>
+          {catStats.map((cs) => (
+            <View key={cs.cat} style={styles.catRow}>
+              <View style={styles.catMeta}>
+                <Text style={styles.catName}>{cs.cat}</Text>
+                <Text style={styles.catCount}>
+                  {cs.done}/{cs.total}
+                </Text>
               </View>
-            );
-          })}
+              <View style={styles.catTrack}>
+                <View
+                  style={[
+                    styles.catFill,
+                    { width: `${cs.pct}%` as any, backgroundColor: cs.color },
+                  ]}
+                />
+              </View>
+            </View>
+          ))}
         </View>
       </ScrollView>
     </SafeAreaView>

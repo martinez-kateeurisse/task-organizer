@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
     DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     Platform,
     ScrollView,
@@ -13,13 +13,10 @@ import {
     View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import type {
-    Category,
-    Priority as PriorityType,
-    Subtask,
-} from "../../constants/data";
+import ManageCategoriesModal from "../../components/ManageCategoriesModal";
+import type { Priority as PriorityType, Subtask } from "../../constants/data";
 import { fmt, TODAY } from "../../constants/data";
-import { CATEGORY, FONTS, P, PRIORITY } from "../../constants/theme";
+import { categoryStyle, FONTS, P, PRIORITY } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
 
 // ─── ADD TASK SCREEN ──────────────────────────────────────────────────────────
@@ -27,14 +24,23 @@ import { useTasks } from "../../context/TaskContext";
 // which appends the task to the shared list immediately across all tabs.
 
 export default function AddTaskScreen() {
-  const { addTask } = useTasks();
+  const { addTask, categories } = useTasks();
 
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<PriorityType>("medium");
-  const [category, setCategory] = useState<Category>("Work");
+  const [category, setCategory] = useState<string>(categories[0]?.name ?? "");
   const [dueDate, setDueDate] = useState<Date>(new Date(TODAY));
   const [showPicker, setShowPicker] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [showManage, setShowManage] = useState(false);
+
+  // If the selected category was renamed or deleted in the manage modal,
+  // fall back to the first category so the form never holds a stale name
+  useEffect(() => {
+    if (!categories.some((c) => c.name === category)) {
+      setCategory(categories[0]?.name ?? "");
+    }
+  }, [categories, category]);
   const [notes, setNotes] = useState("");
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [subtaskInput, setSubtaskInput] = useState("");
@@ -79,7 +85,7 @@ export default function AddTaskScreen() {
     });
     setTitle("");
     setPriority("medium");
-    setCategory("Work");
+    setCategory(categories[0]?.name ?? "");
     setDueDate(new Date(TODAY));
     setNotes("");
     setSubtasks([]);
@@ -176,20 +182,29 @@ export default function AddTaskScreen() {
           </View>
         </View>
 
-        {/* Category toggle group */}
+        {/* Category toggle group — dynamic, with a link to manage categories */}
         <View style={styles.field}>
-          <Text style={styles.label}>Category</Text>
-          <View style={styles.toggleRow}>
-            {(["Work", "Personal", "Health"] as Category[]).map((cat) => {
-              const cc = CATEGORY[cat];
-              const active = category === cat;
+          <View style={styles.labelRow}>
+            <Text style={[styles.label, styles.labelInline]}>Category</Text>
+            <TouchableOpacity
+              onPress={() => setShowManage(true)}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.manageLink}>Edit</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={[styles.toggleRow, styles.wrapRow]}>
+            {categories.map((cat) => {
+              const cc = categoryStyle(cat.color);
+              const active = category === cat.name;
               return (
                 <TouchableOpacity
-                  key={cat}
-                  onPress={() => setCategory(cat)}
+                  key={cat.id}
+                  onPress={() => setCategory(cat.name)}
                   activeOpacity={0.7}
                   style={[
                     styles.toggleBtn,
+                    styles.catToggleBtn,
                     { borderColor: active ? cc.text : P.border },
                     active && { backgroundColor: cc.bg },
                   ]}
@@ -199,8 +214,9 @@ export default function AddTaskScreen() {
                       styles.toggleText,
                       { color: active ? cc.text : P.textSoft },
                     ]}
+                    numberOfLines={1}
                   >
-                    {cat}
+                    {cat.name}
                   </Text>
                 </TouchableOpacity>
               );
@@ -325,6 +341,11 @@ export default function AddTaskScreen() {
           </Text>
         </TouchableOpacity>
       </ScrollView>
+
+      <ManageCategoriesModal
+        visible={showManage}
+        onClose={() => setShowManage(false)}
+      />
     </SafeAreaView>
   );
 }
@@ -363,6 +384,20 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     textTransform: "uppercase",
     marginBottom: 8,
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  labelInline: { marginBottom: 0 },
+  manageLink: {
+    fontSize: 11,
+    fontFamily: FONTS.sansBold,
+    color: P.lavender,
+    letterSpacing: 0.5,
+    textTransform: "uppercase",
   },
   input: {
     backgroundColor: P.white,
@@ -443,6 +478,9 @@ const styles = StyleSheet.create({
   },
 
   toggleRow: { flexDirection: "row", gap: 8 },
+  wrapRow: { flexWrap: "wrap" },
+  // flexBasis (not flex: 1) so rows actually wrap at ~3 buttons per line
+  catToggleBtn: { flexBasis: "30%", flexGrow: 1 },
   toggleBtn: {
     flex: 1,
     flexDirection: "row",

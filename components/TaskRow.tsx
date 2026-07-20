@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { Task } from "../constants/data";
-import { CATEGORY, FONTS, P, PRIORITY } from "../constants/theme";
+import { categoryStyle, FONTS, P, PRIORITY } from "../constants/theme";
 import { useTasks } from "../context/TaskContext";
 
 // ─── TASK ROW ─────────────────────────────────────────────────────────────────
@@ -23,8 +23,10 @@ interface Props {
 
 export default function TaskRow({ task, onToggle, onEdit, onDetail }: Props) {
   const pr = PRIORITY[task.priority];
-  const ca = CATEGORY[task.category] ?? { bg: P.plumLight, text: P.plum };
-  const { deleteTask } = useTasks();
+  const { deleteTask, categories } = useTasks();
+  const ca = categoryStyle(
+    categories.find((c) => c.name === task.category)?.color,
+  );
   const subtasks = task.subtasks ?? [];
   const subDone = subtasks.filter((s) => s.done).length;
 
