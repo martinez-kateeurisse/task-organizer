@@ -1,4 +1,3 @@
-import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { router } from "expo-router";
 import { useState } from "react";
@@ -6,18 +5,20 @@ import {
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import EditTaskModal from "../../components/EditTaskModal";
+import SearchBar from "../../components/SearchBar";
 import TaskDetailModal from "../../components/TaskDetailModal";
+import TaskFilterBar from "../../components/TaskFilterBar";
 import TaskRow from "../../components/TaskRow";
 import { addDays, fmt, Task, TODAY } from "../../constants/data";
-import { FONTS, P, PRIORITY } from "../../constants/theme";
+import { FONTS, P } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
+import { useTaskFilters } from "../../hooks/useTaskFilters";
 
 // ─── DASHBOARD SCREEN ─────────────────────────────────────────────────────────
 // Home tab: greeting, circular progress ring, stat chips, today's task list.
@@ -27,40 +28,11 @@ export default function DashboardScreen() {
   const { tasks, toggleTask, markAllDone, deleteTask } = useTasks();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState<
-    "all" | "high" | "medium" | "low"
-  >("all");
-  const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "done">(
-    "all",
-  );
-  const [sortBy, setSortBy] = useState<"date" | "priority" | "title">("date");
+  const filters = useTaskFilters();
 
   const todayStr = fmt(TODAY);
   const allTodayTasks = tasks.filter((t) => t.date === todayStr);
-  // If a filter is active, only show tasks matching that priority
-  const priorityOrder: Record<string, number> = { high: 0, medium: 1, low: 2 };
-
-  const todayTasks = allTodayTasks
-    // apply priority filter
-    .filter((t) =>
-      priorityFilter === "all" ? true : t.priority === priorityFilter,
-    )
-    // apply status filter
-    .filter((t) =>
-      statusFilter === "all"
-        ? true
-        : statusFilter === "done"
-          ? t.done
-          : !t.done,
-    )
-    // apply sort
-    .sort((a, b) => {
-      if (sortBy === "priority")
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      if (sortBy === "title") return a.title.localeCompare(b.title);
-      return a.date.localeCompare(b.date); // default: sort by date
-    });
+  const todayTasks = filters.apply(allTodayTasks);
   const done = todayTasks.filter((t) => t.done).length;
   const total = todayTasks.length;
   const pct = total === 0 ? 0 : done / total;
@@ -90,13 +62,8 @@ export default function DashboardScreen() {
     })
     .sort((a, b) => a.date.localeCompare(b.date)); // sort by nearest date first
 
-  // When search is active, filter all tasks by title (case-insensitive)
-  const isSearching = searchQuery.trim().length > 0;
-  const searchResults = isSearching
-    ? tasks.filter((t) =>
-        t.title.toLowerCase().includes(searchQuery.toLowerCase()),
-      )
-    : [];
+  // Search spans every task, not just today's, and respects the active filters
+  const searchResults = filters.isSearching ? filters.search(tasks) : [];
 
   const statChips = [
     {
@@ -127,29 +94,10 @@ export default function DashboardScreen() {
         </View>
 
         {/* Search bar */}
-        <View style={styles.searchContainer}>
-          <Ionicons
-            name="search-outline"
-            size={16}
-            color={P.textSoft}
-            style={styles.searchIcon}
-          />
-          <TextInput
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholder="Search tasks..."
-            placeholderTextColor={P.textSoft}
-            style={styles.searchInput}
-            returnKeyType="search"
-            clearButtonMode="while-editing" // iOS only — shows an X to clear
-          />
-          {/* Clear button for Android */}
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery("")}>
-              <Ionicons name="close-circle" size={16} color={P.textSoft} />
-            </TouchableOpacity>
-          )}
-        </View>
+        <SearchBar
+          value={filters.searchQuery}
+          onChange={filters.setSearchQuery}
+        />
 
         {/* Progress card — LinearGradient replaces CSS radial-gradient */}
         <LinearGradient
@@ -208,7 +156,7 @@ export default function DashboardScreen() {
           </Svg>
 
           <View style={styles.progressText}>
-            <Text style={styles.progressLabel}>Today's Progress</Text>
+            <Text style={styles.progressLabel}>Today&apos;s Progress</Text>
             <Text style={styles.progressValue}>
               {done === total && total > 0
                 ? "All done! 🎉"
@@ -225,7 +173,7 @@ export default function DashboardScreen() {
         </LinearGradient>
 
         {/* ── Search results — replaces normal layout when searching ── */}
-        {isSearching && (
+        {filters.isSearching && (
           <>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>Results</Text>
@@ -256,7 +204,7 @@ export default function DashboardScreen() {
         )}
 
         {/* ── Normal layout — hidden while searching ── */}
-        {!isSearching && (
+        {!filters.isSearching && (
           <>
             <View style={styles.chipsRow}>
               {statChips.map((s) => (
@@ -271,7 +219,7 @@ export default function DashboardScreen() {
 
             {/* Today task list */}
             <View style={styles.sectionHeader}>
-              <Text style={styles.sectionTitle}>Today's Tasks</Text>
+              <Text style={styles.sectionTitle}>Today&apos;s Tasks</Text>
               <View
                 style={{ flexDirection: "row", alignItems: "center", gap: 10 }}
               >
@@ -291,101 +239,14 @@ export default function DashboardScreen() {
               </View>
             </View>
 
-            {/* Priority filter badges */}
-            <View style={styles.filterRow}>
-              {(["all", "high", "medium", "low"] as const).map((f) => {
-                const active = priorityFilter === f;
-                const color = f === "all" ? P.plum : PRIORITY[f].dot;
-                const bg = f === "all" ? P.plumLight : PRIORITY[f].bg;
-                return (
-                  <TouchableOpacity
-                    key={f}
-                    onPress={() => setPriorityFilter(f)}
-                    activeOpacity={0.7}
-                    style={[
-                      styles.filterBadge,
-                      active && { backgroundColor: bg, borderColor: color },
-                    ]}
-                  >
-                    {f !== "all" && (
-                      <View
-                        style={[
-                          styles.filterDot,
-                          { backgroundColor: active ? color : P.border },
-                        ]}
-                      />
-                    )}
-                    <Text style={[styles.filterText, active && { color }]}>
-                      {f === "all" ? "All" : PRIORITY[f].label}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-
-            {/* Status filter + Sort row */}
-            <View style={styles.filterRow}>
-              {/* Status filter */}
-              {(["all", "pending", "done"] as const).map((s) => {
-                const active = statusFilter === s;
-                const labels = { all: "All", pending: "Pending", done: "Done" };
-                return (
-                  <TouchableOpacity
-                    key={s}
-                    onPress={() => setStatusFilter(s)}
-                    activeOpacity={0.7}
-                    style={[
-                      styles.filterBadge,
-                      active && {
-                        backgroundColor: P.plumLight,
-                        borderColor: P.plum,
-                      },
-                    ]}
-                  >
-                    <Text
-                      style={[styles.filterText, active && { color: P.plum }]}
-                    >
-                      {labels[s]}
-                    </Text>
-                  </TouchableOpacity>
-                );
-              })}
-
-              {/* Spacer */}
-              <View style={{ flex: 1 }} />
-
-              {/* Sort button */}
-              <TouchableOpacity
-                onPress={() => {
-                  const options: Array<"date" | "priority" | "title"> = [
-                    "date",
-                    "priority",
-                    "title",
-                  ];
-                  const next =
-                    options[(options.indexOf(sortBy) + 1) % options.length];
-                  setSortBy(next);
-                }}
-                activeOpacity={0.7}
-                style={[
-                  styles.filterBadge,
-                  { borderColor: P.lavender, backgroundColor: "#EDE8F7" },
-                ]}
-              >
-                <Ionicons
-                  name="swap-vertical-outline"
-                  size={12}
-                  color={P.lavender}
-                />
-                <Text style={[styles.filterText, { color: P.lavender }]}>
-                  {sortBy === "date"
-                    ? "By Date"
-                    : sortBy === "priority"
-                      ? "By Priority"
-                      : "By Title"}
-                </Text>
-              </TouchableOpacity>
-            </View>
+            <TaskFilterBar
+              priorityFilter={filters.priorityFilter}
+              onPriorityChange={filters.setPriorityFilter}
+              statusFilter={filters.statusFilter}
+              onStatusChange={filters.setStatusFilter}
+              sortBy={filters.sortBy}
+              onCycleSort={filters.cycleSort}
+            />
 
             {todayTasks.length === 0 ? (
               <TouchableOpacity
@@ -576,32 +437,6 @@ const styles = StyleSheet.create({
     color: P.textSoft,
     fontFamily: FONTS.sans,
   },
-  filterRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 14,
-  },
-  filterBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 5,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: P.border,
-    backgroundColor: P.white,
-  },
-  filterDot: {
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  filterText: {
-    fontSize: 12,
-    fontFamily: FONTS.sansBold,
-    color: P.textSoft,
-  },
   markAllBtn: {
     backgroundColor: P.plumLight,
     borderRadius: 10,
@@ -630,24 +465,4 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   emptySubtitle: { fontSize: 13, fontFamily: FONTS.sans, color: P.textSoft },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: P.white,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: P.border,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    marginBottom: 16,
-    gap: 8,
-  },
-  searchIcon: { flexShrink: 0 },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    fontFamily: FONTS.sans,
-    color: P.textDark,
-    padding: 0, // removes default TextInput padding on Android
-  },
 });
