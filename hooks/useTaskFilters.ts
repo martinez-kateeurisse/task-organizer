@@ -1,17 +1,30 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Task } from "../constants/data";
+import { usePreferences } from "../context/PreferencesContext";
 
 // ─── TASK FILTERS HOOK ────────────────────────────────────────────────────────
 // Owns the search / priority / status / sort state shared by Dashboard and
 // Calendar, plus the pure apply() that runs them over a task list.
 //
-// Each screen calls this independently, so their filter selections stay separate.
-// Centralising it here means Phase 3's persisted preferences only need wiring
-// in one place.
+// Each screen passes its own `key`, so their selections stay separate and are
+// persisted separately. The search query is deliberately not persisted —
+// reopening the app to a stale search would look like missing tasks.
 
 export type PriorityFilter = "all" | "high" | "medium" | "low";
 export type StatusFilter = "all" | "pending" | "done";
 export type SortBy = "date" | "priority" | "title";
+
+export interface TaskFilterPrefs {
+  priorityFilter: PriorityFilter;
+  statusFilter: StatusFilter;
+  sortBy: SortBy;
+}
+
+const DEFAULT_FILTERS: TaskFilterPrefs = {
+  priorityFilter: "all",
+  statusFilter: "all",
+  sortBy: "date",
+};
 
 export const SORT_LABELS: Record<SortBy, string> = {
   date: "By Date",
@@ -32,11 +45,25 @@ export function matchesSearch(task: Task, query: string): boolean {
   return (task.tags ?? []).some((tag) => tag.toLowerCase().includes(q));
 }
 
-export function useTaskFilters() {
+export function useTaskFilters(key: string) {
+  const { getFilters, saveFilters } = usePreferences();
+  // PreferencesProvider gates rendering on its own load, so stored filters are
+  // already available here and can seed state directly.
+  const [stored] = useState(() => getFilters(key) ?? DEFAULT_FILTERS);
+
   const [searchQuery, setSearchQuery] = useState("");
-  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
-  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>(
+    stored.priorityFilter,
+  );
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>(
+    stored.statusFilter,
+  );
+  const [sortBy, setSortBy] = useState<SortBy>(stored.sortBy);
+
+  useEffect(() => {
+    saveFilters(key, { priorityFilter, statusFilter, sortBy });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key, priorityFilter, statusFilter, sortBy]);
 
   const isSearching = searchQuery.trim().length > 0;
 

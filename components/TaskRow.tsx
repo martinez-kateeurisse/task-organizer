@@ -1,9 +1,11 @@
 import { Ionicons } from "@expo/vector-icons";
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import { Task } from "../constants/data";
-import { categoryStyle, FONTS, P, PRIORITY } from "../constants/theme";
+import { FONTS, Palette } from "../constants/theme";
 import { useTasks } from "../context/TaskContext";
+import { useStyles } from "../context/ThemeContext";
+import { useDeleteWithUndo } from "../hooks/useDeleteWithUndo";
 
 // ─── TASK ROW ─────────────────────────────────────────────────────────────────
 // A tappable task card used on Dashboard and Calendar screens.
@@ -22,8 +24,10 @@ interface Props {
 }
 
 export default function TaskRow({ task, onToggle, onEdit, onDetail }: Props) {
+  const { P, PRIORITY, categoryStyle, styles } = useStyles(makeStyles);
   const pr = PRIORITY[task.priority];
-  const { deleteTask, categories } = useTasks();
+  const { categories } = useTasks();
+  const deleteWithUndo = useDeleteWithUndo();
   const ca = categoryStyle(
     categories.find((c) => c.name === task.category)?.color,
   );
@@ -43,25 +47,12 @@ export default function TaskRow({ task, onToggle, onEdit, onDetail }: Props) {
           <Text style={styles.editActionText}>Edit</Text>
         </TouchableOpacity>
 
-        {/* Delete button — shows confirmation before deleting */}
+        {/* Delete button — removes straight away and offers an undo toast */}
         <TouchableOpacity
           style={styles.deleteAction}
-          onPress={() => {
-            Alert.alert(
-              "Delete Task",
-              `Are you sure you want to delete "${task.title}"?`,
-              [
-                { text: "Cancel", style: "cancel" },
-                {
-                  text: "Delete",
-                  style: "destructive",
-                  onPress: () => deleteTask(task.id),
-                },
-              ],
-            );
-          }}
+          onPress={() => deleteWithUndo(task)}
         >
-          <Ionicons name="trash" size={18} color="#E53935" />
+          <Ionicons name="trash" size={18} color={P.danger} />
           <Text style={styles.deleteActionText}>Delete</Text>
         </TouchableOpacity>
       </View>
@@ -135,7 +126,7 @@ export default function TaskRow({ task, onToggle, onEdit, onDetail }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   row: {
     flexDirection: "row", // children sit side-by-side (RN defaults to column)
     alignItems: "center",
@@ -172,7 +163,7 @@ const styles = StyleSheet.create({
     height: 10,
     borderRightWidth: 2,
     borderBottomWidth: 2,
-    borderColor: "white",
+    borderColor: P.onAccent,
     transform: [{ rotate: "45deg" }, { translateY: -1 }],
   },
   priorityDot: {
@@ -223,7 +214,7 @@ const styles = StyleSheet.create({
     paddingVertical: 3,
   },
   dateBadgeOverdue: {
-    backgroundColor: "#FDECEA", // light red background
+    backgroundColor: P.dangerLight,
   },
   dateBadgeText: {
     fontSize: 10,
@@ -231,7 +222,7 @@ const styles = StyleSheet.create({
     color: P.textSoft,
   },
   dateBadgeTextOverdue: {
-    color: "#C0392B", // red text for overdue
+    color: P.dangerDeep,
   },
   menuBtn: {
     paddingLeft: 4,
@@ -263,7 +254,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
   deleteAction: {
-    backgroundColor: "#FDECEA",
+    backgroundColor: P.dangerLight,
     justifyContent: "center",
     alignItems: "center",
     width: 70,
@@ -272,7 +263,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   deleteActionText: {
-    color: "#E53935",
+    color: P.danger,
     fontFamily: FONTS.sansBold,
     fontSize: 11,
   },

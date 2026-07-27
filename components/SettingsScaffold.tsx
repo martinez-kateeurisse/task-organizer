@@ -1,7 +1,8 @@
 import { ReactNode } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { FONTS, P } from "../constants/theme";
+import { FONTS, Palette } from "../constants/theme";
+import { useStyles } from "../context/ThemeContext";
 
 // ─── SETTINGS SCAFFOLD ────────────────────────────────────────────────────────
 // Shared shell for the settings detail screens: safe area, scroll container,
@@ -14,6 +15,7 @@ export function SettingsScaffold({
   subtitle?: string;
   children: ReactNode;
 }) {
+  const { styles } = useStyles(makeStyles);
   return (
     <SafeAreaView style={styles.safe} edges={["bottom"]}>
       <ScrollView
@@ -35,6 +37,7 @@ export function SettingsSection({
   label: string;
   children: ReactNode;
 }) {
+  const { styles } = useStyles(makeStyles);
   return (
     <>
       <Text style={styles.sectionLabel}>{label}</Text>
@@ -53,6 +56,7 @@ export function SettingsRow({
   value: string;
   last?: boolean;
 }) {
+  const { styles } = useStyles(makeStyles);
   return (
     <View style={[styles.row, !last && styles.rowDivider]}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -63,10 +67,11 @@ export function SettingsRow({
 
 // Explanatory paragraph — used where a screen needs prose rather than rows
 export function SettingsNote({ children }: { children: ReactNode }) {
+  const { styles } = useStyles(makeStyles);
   return <Text style={styles.note}>{children}</Text>;
 }
 
-export const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: P.lilac },
   content: { paddingHorizontal: 18, paddingBottom: 40, paddingTop: 20 },
   subtitle: {

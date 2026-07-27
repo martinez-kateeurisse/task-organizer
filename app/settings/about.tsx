@@ -6,7 +6,8 @@ import {
   SettingsScaffold,
   SettingsSection,
 } from "../../components/SettingsScaffold";
-import { FONTS, P } from "../../constants/theme";
+import { FONTS, Palette } from "../../constants/theme";
+import { useStyles } from "../../context/ThemeContext";
 import { useTasks } from "../../context/TaskContext";
 
 // ─── ABOUT TASKLY ─────────────────────────────────────────────────────────────
@@ -14,6 +15,7 @@ import { useTasks } from "../../context/TaskContext";
 // can't fall out of step with the manifest.
 
 export default function AboutSettings() {
+  const { styles } = useStyles(makeStyles);
   const { tasks } = useTasks();
   const completed = tasks.filter((t) => t.done).length;
 
@@ -57,7 +59,7 @@ export default function AboutSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   hero: { alignItems: "center", paddingVertical: 18, marginBottom: 12 },
   heroMark: { fontSize: 44, marginBottom: 10 },
   heroTitle: { fontSize: 30, fontFamily: FONTS.serif, color: P.textDark },

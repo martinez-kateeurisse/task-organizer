@@ -1,6 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
 import {
-    Alert,
     Modal,
     ScrollView,
     StyleSheet,
@@ -9,7 +8,8 @@ import {
     View,
 } from "react-native";
 import { Task } from "../constants/data";
-import { categoryStyle, FONTS, P, PRIORITY } from "../constants/theme";
+import { FONTS, Palette } from "../constants/theme";
+import { useStyles } from "../context/ThemeContext";
 import { useTasks } from "../context/TaskContext";
 import { formatReminder } from "./ReminderField";
 
@@ -34,7 +34,8 @@ export default function TaskDetailModal({
   onEdit,
   onDelete,
 }: Props) {
-  // Hook must run unconditionally, so it sits above the early return
+  // Hooks must run unconditionally, so they sit above the early return
+  const { P, PRIORITY, categoryStyle, styles } = useStyles(makeStyles);
   const { categories } = useTasks();
   if (!task) return null;
 
@@ -218,24 +219,12 @@ export default function TaskDetailModal({
             style={styles.deleteBtn}
             activeOpacity={0.7}
             onPress={() => {
-              Alert.alert(
-                "Delete Task",
-                `Are you sure you want to delete "${task.title}"?`,
-                [
-                  { text: "Cancel", style: "cancel" },
-                  {
-                    text: "Delete",
-                    style: "destructive",
-                    onPress: () => {
-                      onDelete(task);
-                      onClose();
-                    },
-                  },
-                ],
-              );
+              // Close first: the undo toast renders behind a native modal.
+              onClose();
+              onDelete(task);
             }}
           >
-            <Ionicons name="trash-outline" size={16} color="#E53935" />
+            <Ionicons name="trash-outline" size={16} color={P.danger} />
             <Text style={styles.deleteBtnText}>Delete</Text>
           </TouchableOpacity>
 
@@ -257,10 +246,10 @@ export default function TaskDetailModal({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: P.overlay,
   },
   sheet: {
     backgroundColor: P.white,
@@ -431,12 +420,12 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: "#E53935",
+    borderColor: P.danger,
   },
   deleteBtnText: {
     fontSize: 14,
     fontFamily: FONTS.sansBold,
-    color: "#E53935",
+    color: P.danger,
   },
   editBtn: {
     flex: 2,
@@ -447,7 +436,7 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     borderRadius: 16,
     backgroundColor: P.plum,
-    shadowColor: P.plum,
+    shadowColor: P.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 10,

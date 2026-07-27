@@ -2,7 +2,9 @@ import { useState } from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { SettingsScaffold } from "../../components/SettingsScaffold";
-import { FONTS, P } from "../../constants/theme";
+import { FONTS, Palette } from "../../constants/theme";
+import { usePreferences } from "../../context/PreferencesContext";
+import { useStyles } from "../../context/ThemeContext";
 
 // ─── HELP & SUPPORT ───────────────────────────────────────────────────────────
 // Expandable FAQ. Tapping a question reveals its answer; only one is open at a
@@ -36,6 +38,8 @@ const FAQS = [
 ];
 
 export default function HelpSettings() {
+  const { P, styles } = useStyles(makeStyles);
+  const { resetOnboarding } = usePreferences();
   const [open, setOpen] = useState<number | null>(null);
 
   return (
@@ -60,11 +64,39 @@ export default function HelpSettings() {
           </View>
         );
       })}
+
+      {/* Clearing the flag sends the root layout back to the tour. */}
+      <TouchableOpacity
+        onPress={resetOnboarding}
+        activeOpacity={0.8}
+        style={styles.replayBtn}
+      >
+        <Ionicons name="refresh-outline" size={16} color={P.plum} />
+        <Text style={styles.replayText}>REPLAY INTRO</Text>
+      </TouchableOpacity>
     </SettingsScaffold>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
+  replayBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    marginTop: 14,
+    paddingVertical: 15,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: P.border,
+    backgroundColor: P.white,
+  },
+  replayText: {
+    fontSize: 13,
+    fontFamily: FONTS.sansBold,
+    color: P.plum,
+    letterSpacing: 1,
+  },
   card: {
     backgroundColor: P.white,
     borderRadius: 16,

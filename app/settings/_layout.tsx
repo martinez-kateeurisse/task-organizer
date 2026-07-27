@@ -1,5 +1,6 @@
 import { Stack } from "expo-router";
-import { FONTS, P } from "../../constants/theme";
+import { FONTS } from "../../constants/theme";
+import { useTheme } from "../../context/ThemeContext";
 
 // ─── SETTINGS STACK ───────────────────────────────────────────────────────────
 // Pushed over the tabs from the Profile screen. Unlike the tab screens (which
@@ -7,6 +8,7 @@ import { FONTS, P } from "../../constants/theme";
 // gesture and title come for free — restyled to match Lavender Fields.
 
 export default function SettingsLayout() {
+  const { P } = useTheme();
   return (
     <Stack
       screenOptions={{

@@ -11,7 +11,8 @@ import {
     View,
 } from "react-native";
 import { Category } from "../constants/data";
-import { CATEGORY_COLORS, FONTS, P } from "../constants/theme";
+import { FONTS, Palette } from "../constants/theme";
+import { useStyles } from "../context/ThemeContext";
 import { useTasks } from "../context/TaskContext";
 
 // ─── MANAGE CATEGORIES MODAL ──────────────────────────────────────────────────
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export default function ManageCategoriesModal({ visible, onClose }: Props) {
+  const { P, CATEGORY_COLORS, styles } = useStyles(makeStyles);
   const { categories, tasks, addCategory, updateCategory, deleteCategory } =
     useTasks();
 
@@ -206,10 +208,10 @@ export default function ManageCategoriesModal({ visible, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: P.overlay,
   },
   sheet: {
     backgroundColor: P.white,

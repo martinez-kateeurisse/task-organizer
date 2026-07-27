@@ -10,7 +10,8 @@ import {
   View,
 } from "react-native";
 import { initials } from "../constants/data";
-import { FONTS, P } from "../constants/theme";
+import { FONTS, Palette } from "../constants/theme";
+import { useStyles } from "../context/ThemeContext";
 import { useProfile } from "../context/ProfileContext";
 
 // ─── EDIT PROFILE MODAL ───────────────────────────────────────────────────────
@@ -28,6 +29,7 @@ interface Props {
 }
 
 export default function EditProfileModal({ visible, onClose }: Props) {
+  const { P, styles } = useStyles(makeStyles);
   const { profile, updateProfile } = useProfile();
 
   const [name, setName] = useState(profile.name);
@@ -151,10 +153,10 @@ export default function EditProfileModal({ visible, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: P.overlay,
   },
   sheet: {
     backgroundColor: P.white,

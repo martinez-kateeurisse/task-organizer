@@ -16,7 +16,9 @@ import TaskDetailModal from "../../components/TaskDetailModal";
 import TaskFilterBar from "../../components/TaskFilterBar";
 import TaskRow from "../../components/TaskRow";
 import { addDays, fmt, Task, TODAY } from "../../constants/data";
-import { FONTS, P } from "../../constants/theme";
+import { FONTS, onGradientAlpha, Palette } from "../../constants/theme";
+import { useStyles } from "../../context/ThemeContext";
+import { useDeleteWithUndo } from "../../hooks/useDeleteWithUndo";
 import { useTasks } from "../../context/TaskContext";
 import { useTaskFilters } from "../../hooks/useTaskFilters";
 
@@ -25,10 +27,12 @@ import { useTaskFilters } from "../../hooks/useTaskFilters";
 // useTasks() pulls tasks and toggleTask from TaskContext — no props needed.
 
 export default function DashboardScreen() {
-  const { tasks, toggleTask, markAllDone, deleteTask } = useTasks();
+  const { P, styles } = useStyles(makeStyles);
+  const { tasks, toggleTask, markAllDone } = useTasks();
+  const deleteWithUndo = useDeleteWithUndo();
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
-  const filters = useTaskFilters();
+  const filters = useTaskFilters("dashboard");
 
   const todayStr = fmt(TODAY);
   const allTodayTasks = tasks.filter((t) => t.date === todayStr);
@@ -101,7 +105,7 @@ export default function DashboardScreen() {
 
         {/* Progress card — LinearGradient replaces CSS radial-gradient */}
         <LinearGradient
-          colors={[P.plum, "#3D2855"]}
+          colors={[P.heroFrom, P.heroTo]}
           start={{ x: 0.2, y: 0.5 }}
           end={{ x: 1, y: 0.5 }}
           style={styles.progressCard}
@@ -114,7 +118,7 @@ export default function DashboardScreen() {
               cy={cy}
               r={R}
               fill="none"
-              stroke="rgba(255,255,255,0.15)"
+              stroke={onGradientAlpha(0.15)}
               strokeWidth={7}
             />
             {/* Sage arc — only draws pct fraction of the circle.
@@ -137,7 +141,7 @@ export default function DashboardScreen() {
               x={cx}
               y={cy - 4}
               textAnchor="middle"
-              fill="white"
+              fill={P.onGradient}
               fontFamily={FONTS.sansBold}
               fontSize="15"
             >
@@ -147,7 +151,7 @@ export default function DashboardScreen() {
               x={cx}
               y={cy + 12}
               textAnchor="middle"
-              fill="rgba(255,255,255,0.5)"
+              fill={onGradientAlpha(0.5)}
               fontFamily={FONTS.sans}
               fontSize="11"
             >
@@ -305,14 +309,14 @@ export default function DashboardScreen() {
         }}
         onDelete={(task) => {
           setDetailTask(null);
-          deleteTask(task.id);
+          deleteWithUndo(task);
         }}
       />
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   safe: {
     flex: 1,
     backgroundColor: P.lilac,
@@ -350,7 +354,7 @@ const styles = StyleSheet.create({
     gap: 16,
     marginBottom: 16,
     // iOS shadow
-    shadowColor: P.plum,
+    shadowColor: P.shadow,
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.35,
     shadowRadius: 20,
@@ -361,7 +365,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   progressLabel: {
-    color: "rgba(255,255,255,0.6)",
+    color: onGradientAlpha(0.6),
     fontSize: 11,
     fontFamily: FONTS.sansBold,
     letterSpacing: 0.8,
@@ -369,7 +373,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   progressValue: {
-    color: "white",
+    color: P.onGradient,
     fontSize: 20,
     fontFamily: FONTS.serif,
     lineHeight: 26,
@@ -377,7 +381,7 @@ const styles = StyleSheet.create({
   progressTrack: {
     height: 4,
     width: 140,
-    backgroundColor: "rgba(255,255,255,0.2)",
+    backgroundColor: onGradientAlpha(0.2),
     borderRadius: 4,
     marginTop: 10,
     overflow: "hidden", // clips the fill bar to the track's rounded corners

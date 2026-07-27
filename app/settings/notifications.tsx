@@ -8,8 +8,9 @@ import {
   SettingsScaffold,
   SettingsSection,
 } from "../../components/SettingsScaffold";
-import { FONTS, P } from "../../constants/theme";
+import { FONTS, Palette } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
+import { useStyles } from "../../context/ThemeContext";
 import { requestPermission } from "../../utils/notifications";
 
 // ─── NOTIFICATIONS SETTINGS ───────────────────────────────────────────────────
@@ -17,6 +18,7 @@ import { requestPermission } from "../../utils/notifications";
 // so a user who isn't getting notifications can see why.
 
 export default function NotificationsSettings() {
+  const { styles } = useStyles(makeStyles);
   const { tasks } = useTasks();
   const [status, setStatus] = useState<string | null>(null);
 
@@ -102,7 +104,7 @@ export default function NotificationsSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   enableBtn: {
     paddingVertical: 15,
     borderRadius: 16,
@@ -113,7 +115,7 @@ const styles = StyleSheet.create({
   enableBtnText: {
     fontSize: 14,
     fontFamily: FONTS.sansBold,
-    color: P.white,
+    color: P.onAccent,
     letterSpacing: 1,
   },
   emptyRow: { paddingVertical: 16 },

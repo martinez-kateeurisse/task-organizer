@@ -17,7 +17,8 @@ import ManageCategoriesModal from "../../components/ManageCategoriesModal";
 import ReminderField from "../../components/ReminderField";
 import type { Priority as PriorityType, Subtask } from "../../constants/data";
 import { fmt, TODAY } from "../../constants/data";
-import { categoryStyle, FONTS, P, PRIORITY } from "../../constants/theme";
+import { FONTS, Palette } from "../../constants/theme";
+import { useStyles } from "../../context/ThemeContext";
 import { useTasks } from "../../context/TaskContext";
 
 // ─── ADD TASK SCREEN ──────────────────────────────────────────────────────────
@@ -25,6 +26,7 @@ import { useTasks } from "../../context/TaskContext";
 // which appends the task to the shared list immediately across all tabs.
 
 export default function AddTaskScreen() {
+  const { P, PRIORITY, categoryStyle, styles } = useStyles(makeStyles);
   const { addTask, categories } = useTasks();
 
   const [title, setTitle] = useState("");
@@ -361,7 +363,7 @@ export default function AddTaskScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: P.lilac },
   content: { paddingHorizontal: 18, paddingBottom: 40 },
   header: { paddingTop: 28, marginBottom: 28 },
@@ -384,7 +386,7 @@ const styles = StyleSheet.create({
   successText: {
     fontSize: 14,
     fontFamily: FONTS.sansBold,
-    color: "#4A7030",
+    color: P.sageDeep,
   },
 
   field: { marginBottom: 22 },
@@ -513,7 +515,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     backgroundColor: P.plum,
     alignItems: "center",
-    shadowColor: P.plum,
+    shadowColor: P.shadow,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.35,
     shadowRadius: 16,
@@ -527,7 +529,7 @@ const styles = StyleSheet.create({
   submitText: {
     fontSize: 15,
     fontFamily: FONTS.sansBold,
-    color: "white",
+    color: P.onAccent,
     letterSpacing: 1.2,
   },
   submitTextDisabled: { color: P.textSoft },

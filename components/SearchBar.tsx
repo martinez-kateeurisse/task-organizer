@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, TextInput, TouchableOpacity, View } from "react-native";
-import { FONTS, P } from "../constants/theme";
+import { FONTS, Palette } from "../constants/theme";
+import { useStyles } from "../context/ThemeContext";
 
 // ─── SEARCH BAR ───────────────────────────────────────────────────────────────
 // Shared by Dashboard and Calendar so both screens search identically.
@@ -16,6 +17,7 @@ export default function SearchBar({
   onChange,
   placeholder = "Search tasks...",
 }: Props) {
+  const { P, styles } = useStyles(makeStyles);
   return (
     <View style={styles.container}>
       <Ionicons
@@ -43,7 +45,7 @@ export default function SearchBar({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   container: {
     flexDirection: "row",
     alignItems: "center",

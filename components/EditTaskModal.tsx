@@ -4,7 +4,6 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { useEffect, useState } from "react";
 import {
-    Alert,
     Modal,
     Platform,
     ScrollView,
@@ -15,7 +14,9 @@ import {
     View,
 } from "react-native";
 import { fmt, Priority, Subtask, Task } from "../constants/data";
-import { categoryStyle, FONTS, P, PRIORITY } from "../constants/theme";
+import { FONTS, Palette } from "../constants/theme";
+import { useStyles } from "../context/ThemeContext";
+import { useDeleteWithUndo } from "../hooks/useDeleteWithUndo";
 import { useTasks } from "../context/TaskContext";
 import ManageCategoriesModal from "./ManageCategoriesModal";
 import ReminderField from "./ReminderField";
@@ -35,7 +36,9 @@ interface Props {
 }
 
 export default function EditTaskModal({ task, onClose }: Props) {
-  const { updateTask, deleteTask, categories } = useTasks();
+  const { P, PRIORITY, categoryStyle, styles } = useStyles(makeStyles);
+  const { updateTask, categories } = useTasks();
+  const deleteWithUndo = useDeleteWithUndo();
 
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
@@ -121,22 +124,9 @@ export default function EditTaskModal({ task, onClose }: Props) {
 
   function handleDelete() {
     if (!task) return;
-    // Alert.alert shows a native confirmation dialog before deleting
-    Alert.alert(
-      "Delete Task",
-      `Are you sure you want to delete "${task.title}"?`,
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Delete",
-          style: "destructive",
-          onPress: () => {
-            deleteTask(task.id);
-            onClose();
-          },
-        },
-      ],
-    );
+    // Close first: the undo toast renders behind a native modal.
+    onClose();
+    deleteWithUndo(task);
   }
 
   return (
@@ -415,10 +405,10 @@ export default function EditTaskModal({ task, onClose }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   backdrop: {
     flex: 1,
-    backgroundColor: "rgba(0,0,0,0.35)",
+    backgroundColor: P.overlay,
   },
   sheet: {
     backgroundColor: P.white,
@@ -584,17 +574,17 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
     borderRadius: 16,
     borderWidth: 2,
-    borderColor: "#E57373",
+    borderColor: P.danger,
     alignItems: "center",
   },
-  deleteBtnText: { fontSize: 14, fontFamily: FONTS.sansBold, color: "#E57373" },
+  deleteBtnText: { fontSize: 14, fontFamily: FONTS.sansBold, color: P.danger },
   saveBtn: {
     flex: 2,
     paddingVertical: 15,
     borderRadius: 16,
     backgroundColor: P.plum,
     alignItems: "center",
-    shadowColor: P.plum,
+    shadowColor: P.shadow,
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.3,
     shadowRadius: 10,
@@ -608,7 +598,7 @@ const styles = StyleSheet.create({
   saveBtnText: {
     fontSize: 14,
     fontFamily: FONTS.sansBold,
-    color: "white",
+    color: P.onAccent,
     letterSpacing: 0.5,
   },
 });

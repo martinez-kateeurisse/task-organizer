@@ -1,6 +1,7 @@
 import { Ionicons } from "@expo/vector-icons";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { FONTS, P, PRIORITY } from "../constants/theme";
+import { FONTS, Palette } from "../constants/theme";
+import { useStyles } from "../context/ThemeContext";
 import {
   PriorityFilter,
   SORT_LABELS,
@@ -35,6 +36,7 @@ export default function TaskFilterBar({
   sortBy,
   onCycleSort,
 }: Props) {
+  const { P, PRIORITY, styles } = useStyles(makeStyles);
   return (
     <>
       {/* Priority filter badges */}
@@ -113,7 +115,7 @@ export default function TaskFilterBar({
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   filterRow: {
     flexDirection: "row",
     gap: 8,

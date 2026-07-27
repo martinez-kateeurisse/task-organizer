@@ -4,7 +4,8 @@ import DateTimePicker, {
 } from "@react-native-community/datetimepicker";
 import { useState } from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { FONTS, P } from "../constants/theme";
+import { FONTS, Palette } from "../constants/theme";
+import { useStyles } from "../context/ThemeContext";
 
 // ─── REMINDER FIELD ───────────────────────────────────────────────────────────
 // Picks the time of day a task's reminder fires. The date comes from the task's
@@ -42,6 +43,7 @@ export function formatReminder(value: string): string {
 }
 
 export default function ReminderField({ value, onChange, dueDate }: Props) {
+  const { P, styles } = useStyles(makeStyles);
   const [showPicker, setShowPicker] = useState(false);
 
   function onTimeChange(event: DateTimePickerEvent, selected?: Date) {
@@ -108,7 +110,7 @@ export default function ReminderField({ value, onChange, dueDate }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   field: { marginBottom: 22 },
   labelRow: {
     flexDirection: "row",

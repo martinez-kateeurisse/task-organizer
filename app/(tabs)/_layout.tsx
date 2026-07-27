@@ -1,8 +1,9 @@
 import { Ionicons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 import { ActivityIndicator, StyleSheet, Text, View } from "react-native";
-import { FONTS, P } from "../../constants/theme";
+import { FONTS, Palette } from "../../constants/theme";
 import { useTasks } from "../../context/TaskContext";
+import { useStyles } from "../../context/ThemeContext";
 
 // ─── TAB LAYOUT ───────────────────────────────────────────────────────────────
 // Registers all 5 tabs and wraps them in TaskProvider so every screen
@@ -14,6 +15,7 @@ import { useTasks } from "../../context/TaskContext";
 // Separate inner component so it can call useTasks() which needs to be inside TaskProvider
 // Small red badge that sits on top of the tab icon showing pending task count
 function PendingBadge() {
+  const { styles } = useStyles(makeStyles);
   const { tasks } = useTasks();
   const count = tasks.filter((t) => !t.done).length;
   if (count === 0) return null;
@@ -26,6 +28,7 @@ function PendingBadge() {
 
 // Separate inner component so it can call useTasks() which needs to be inside TaskProvider
 function TabsWithLoader() {
+  const { P } = useStyles(makeStyles);
   const { loading } = useTasks();
 
   // While AsyncStorage is loading, show a centered spinner instead of the blank app
@@ -138,12 +141,12 @@ function TabsWithLoader() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   badge: {
     position: "absolute",
     top: -4,
     right: -8,
-    backgroundColor: "#E53935", // standard notification red
+    backgroundColor: P.danger,
     borderRadius: 8,
     minWidth: 16,
     height: 16,
@@ -154,7 +157,7 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 9,
     fontFamily: FONTS.sansBold,
-    color: "white",
+    color: P.onAccent,
   },
 });
 

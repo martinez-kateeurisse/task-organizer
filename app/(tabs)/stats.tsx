@@ -3,7 +3,8 @@ import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
 import { TODAY, addDays, fmt } from "../../constants/data";
-import { categoryStyle, FONTS, P } from "../../constants/theme";
+import { FONTS, onGradientAlpha, Palette } from "../../constants/theme";
+import { useStyles } from "../../context/ThemeContext";
 import { useTasks } from "../../context/TaskContext";
 
 // ─── STATS SCREEN ─────────────────────────────────────────────────────────────
@@ -11,6 +12,7 @@ import { useTasks } from "../../context/TaskContext";
 // No hardcoded data — weekly chart and streak both reflect actual history.
 
 export default function StatsScreen() {
+  const { P, categoryStyle, styles } = useStyles(makeStyles);
   const { tasks, categories } = useTasks();
 
   // ── Overall completion rate ───────────────────────────────────────────────
@@ -88,7 +90,7 @@ export default function StatsScreen() {
         <View style={styles.topRow}>
           {/* Streak card — shows real consecutive-day streak */}
           <LinearGradient
-            colors={[P.plum, "#7B52AB"]}
+            colors={[P.gradientFrom, P.gradientTo]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
             style={styles.streakCard}
@@ -233,7 +235,7 @@ export default function StatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: P.lilac },
   content: { paddingHorizontal: 18, paddingBottom: 20 },
   header: { paddingTop: 28, marginBottom: 20 },
@@ -261,13 +263,13 @@ const styles = StyleSheet.create({
   streakNum: {
     fontSize: 28,
     fontFamily: FONTS.sansBold,
-    color: "white",
+    color: P.onGradient,
     marginTop: 6,
   },
   streakLabel: {
     fontSize: 11,
     fontFamily: FONTS.sansBold,
-    color: "rgba(255,255,255,0.7)",
+    color: onGradientAlpha(0.7),
     textTransform: "uppercase",
     letterSpacing: 0.8,
   },

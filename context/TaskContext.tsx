@@ -13,6 +13,12 @@ import {
   Task,
   TaskInput,
 } from "../constants/data";
+import {
+  allTasksDone,
+  taskDeleted,
+  taskRestored,
+  taskToggled,
+} from "../utils/haptics";
 import { cancelTaskReminder, syncTaskReminder } from "../utils/notifications";
 
 // ─── CONTEXT TYPE ─────────────────────────────────────────────────────────────
@@ -25,6 +31,7 @@ interface TaskContextType {
   addTask: (task: TaskInput) => void;
   updateTask: (id: number, updates: Partial<TaskInput>) => void;
   deleteTask: (id: number) => void;
+  restoreTask: (task: Task, index: number) => void;
   markAllDone: (todayStr: string) => void;
   addCategory: (name: string, color: string) => void;
   updateCategory: (
@@ -115,7 +122,10 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   // Completing a task cancels its reminder; un-completing restores it.
   function toggleTask(id: number) {
     const target = tasks.find((t) => t.id === id);
-    if (target) syncTaskReminder({ ...target, done: !target.done });
+    if (target) {
+      syncTaskReminder({ ...target, done: !target.done });
+      taskToggled(!target.done);
+    }
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
     );
@@ -140,14 +150,29 @@ export function TaskProvider({ children }: { children: ReactNode }) {
   // filter returns every task except the one with the matching id — effectively deleting it
   function deleteTask(id: number) {
     cancelTaskReminder(id);
+    taskDeleted();
     setTasks((prev) => prev.filter((t) => t.id !== id));
+  }
+
+  // Undo counterpart to deleteTask. Re-inserting at the original index keeps the
+  // list from visibly reshuffling, and the reminder is rescheduled because
+  // deleteTask cancelled it in the OS.
+  function restoreTask(task: Task, index: number) {
+    syncTaskReminder(task);
+    taskRestored();
+    setTasks((prev) => {
+      if (prev.some((t) => t.id === task.id)) return prev;
+      const next = [...prev];
+      next.splice(Math.min(index, next.length), 0, task);
+      return next;
+    });
   }
 
   // sets done: true only on tasks due today
   function markAllDone(todayStr: string) {
-    tasks
-      .filter((t) => t.date === todayStr && !t.done)
-      .forEach((t) => syncTaskReminder({ ...t, done: true }));
+    const pending = tasks.filter((t) => t.date === todayStr && !t.done);
+    pending.forEach((t) => syncTaskReminder({ ...t, done: true }));
+    if (pending.length > 0) allTasksDone();
     setTasks((prev) =>
       prev.map((t) => (t.date === todayStr ? { ...t, done: true } : t)),
     );
@@ -200,6 +225,7 @@ export function TaskProvider({ children }: { children: ReactNode }) {
         addTask,
         updateTask,
         deleteTask,
+        restoreTask,
         markAllDone,
         addCategory,
         updateCategory,

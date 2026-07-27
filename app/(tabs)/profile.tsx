@@ -13,7 +13,8 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import EditProfileModal from "../../components/EditProfileModal";
 import { initials, INITIAL_REMINDERS, Reminder } from "../../constants/data";
-import { FONTS, P } from "../../constants/theme";
+import { FONTS, onGradientAlpha, Palette } from "../../constants/theme";
+import { useStyles } from "../../context/ThemeContext";
 import { useProfile } from "../../context/ProfileContext";
 import { cancelReminder, scheduleReminder } from "../../utils/notifications";
 
@@ -38,6 +39,7 @@ const SETTINGS = [
 ] as const;
 
 export default function ProfileScreen() {
+  const { P, styles } = useStyles(makeStyles);
   const { profile } = useProfile();
   const [editingProfile, setEditingProfile] = useState(false);
   const [reminders, setReminders] = useState<Reminder[]>(INITIAL_REMINDERS);
@@ -81,7 +83,7 @@ export default function ProfileScreen() {
       >
         {/* ── Profile header card ─────────────────────────── */}
         <LinearGradient
-          colors={[P.plum, P.violet]}
+          colors={[P.gradientFrom, P.gradientTo]}
           start={{ x: 0, y: 0 }}
           end={{ x: 1, y: 1 }}
           style={styles.profileCard}
@@ -115,7 +117,7 @@ export default function ProfileScreen() {
             <Svg width={16} height={16} viewBox="0 0 24 24" fill="none">
               <Path
                 d="M4 20h4L18.5 9.5a2.1 2.1 0 0 0-3-3L5 17v3Z"
-                stroke="white"
+                stroke={P.onGradient}
                 strokeWidth={1.9}
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -142,7 +144,7 @@ export default function ProfileScreen() {
               value={r.active}
               onValueChange={() => toggleReminder(r.id)}
               trackColor={{ false: P.border, true: P.plum }}
-              thumbColor="white"
+              thumbColor={P.onGradient}
               ios_backgroundColor={P.border}
             />
           </View>
@@ -180,7 +182,7 @@ export default function ProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: P.lilac },
   content: { paddingHorizontal: 18, paddingBottom: 20 },
 
@@ -192,7 +194,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 18,
-    shadowColor: P.plum,
+    shadowColor: P.shadow,
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.35,
     shadowRadius: 18,
@@ -206,33 +208,37 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
     borderWidth: 3,
-    borderColor: "rgba(255,255,255,0.4)",
+    borderColor: onGradientAlpha(0.4),
     flexShrink: 0,
   },
-  avatarText: { fontSize: 22, fontFamily: FONTS.serif, color: "white" },
+  avatarText: { fontSize: 22, fontFamily: FONTS.serif, color: P.onGradient },
   profileInfo: { flex: 1 },
-  profileName: { fontSize: 20, fontFamily: FONTS.serif, color: "white" },
+  profileName: { fontSize: 20, fontFamily: FONTS.serif, color: P.onGradient },
   profileEmail: {
     fontSize: 13,
     fontFamily: FONTS.sans,
-    color: "rgba(255,255,255,0.7)",
+    color: onGradientAlpha(0.7),
     marginTop: 2,
   },
   editProfileBtn: {
     alignSelf: "flex-start",
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: onGradientAlpha(0.18),
     borderRadius: 16,
     padding: 8,
     flexShrink: 0,
   },
   badgeRow: { flexDirection: "row", gap: 8, marginTop: 10 },
   badge: {
-    backgroundColor: "rgba(255,255,255,0.18)",
+    backgroundColor: onGradientAlpha(0.18),
     borderRadius: 20,
     paddingHorizontal: 10,
     paddingVertical: 3,
   },
-  badgeText: { fontSize: 11, fontFamily: FONTS.sansBold, color: "white" },
+  badgeText: {
+    fontSize: 11,
+    fontFamily: FONTS.sansBold,
+    color: P.onGradient,
+  },
 
   sectionLabel: {
     fontSize: 11,

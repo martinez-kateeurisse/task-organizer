@@ -14,7 +14,9 @@ import TaskDetailModal from "../../components/TaskDetailModal";
 import TaskFilterBar from "../../components/TaskFilterBar";
 import TaskRow from "../../components/TaskRow";
 import { fmt, Task, TODAY } from "../../constants/data";
-import { FONTS, P } from "../../constants/theme";
+import { FONTS, Palette } from "../../constants/theme";
+import { useStyles } from "../../context/ThemeContext";
+import { useDeleteWithUndo } from "../../hooks/useDeleteWithUndo";
 import { useTasks } from "../../context/TaskContext";
 import { useTaskFilters } from "../../hooks/useTaskFilters";
 
@@ -25,11 +27,13 @@ import { useTaskFilters } from "../../hooks/useTaskFilters";
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 export default function CalendarScreen() {
-  const { tasks, toggleTask, deleteTask } = useTasks();
+  const { P, styles } = useStyles(makeStyles);
+  const { tasks, toggleTask } = useTasks();
+  const deleteWithUndo = useDeleteWithUndo();
   const [selectedDate, setSelectedDate] = useState(fmt(TODAY));
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
-  const filters = useTaskFilters();
+  const filters = useTaskFilters("calendar");
   const year = TODAY.getFullYear();
   const month = TODAY.getMonth();
   const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
@@ -118,7 +122,10 @@ export default function CalendarScreen() {
                     <Text
                       style={[
                         styles.dayNum,
-                        isSel && { color: "white", fontFamily: FONTS.sansBold },
+                        isSel && {
+                          color: P.onAccent,
+                          fontFamily: FONTS.sansBold,
+                        },
                         isToday &&
                           !isSel && {
                             color: P.plum,
@@ -135,7 +142,7 @@ export default function CalendarScreen() {
                           styles.taskDot,
                           {
                             backgroundColor: isSel
-                              ? "rgba(255,255,255,0.7)"
+                              ? P.onAccentMuted
                               : P.lavender,
                           },
                         ]}
@@ -222,7 +229,7 @@ export default function CalendarScreen() {
           }}
           onDelete={(task) => {
             setDetailTask(null);
-            deleteTask(task.id);
+            deleteWithUndo(task);
           }}
         />
       </ScrollView>
@@ -230,7 +237,7 @@ export default function CalendarScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: P.lilac },
   content: { paddingHorizontal: 18, paddingBottom: 20 },
   header: { paddingTop: 28, marginBottom: 20 },

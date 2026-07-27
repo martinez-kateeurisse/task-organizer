@@ -1,35 +1,73 @@
-import { StyleSheet, Text, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import {
-  SettingsNote,
   SettingsRow,
   SettingsScaffold,
   SettingsSection,
 } from "../../components/SettingsScaffold";
-import { CATEGORY_COLORS, FONTS, P } from "../../constants/theme";
+import { FONTS, Palette } from "../../constants/theme";
+import { ThemeMode, useStyles } from "../../context/ThemeContext";
 
 // ─── APPEARANCE SETTINGS ──────────────────────────────────────────────────────
-// Currently read-only: shows the active theme and typography.
-// The dark mode toggle lands here once the theme context exists.
+// Shows the palette and typography, and owns the light/dark control.
 
-const SWATCHES: { key: keyof typeof P; label: string }[] = [
+const SWATCHES: { key: keyof Palette; label: string }[] = [
   { key: "plum", label: "Plum" },
   { key: "lavender", label: "Lavender" },
   { key: "lilac", label: "Lilac" },
   { key: "sage", label: "Sage" },
 ];
 
+const MODES: { key: ThemeMode; label: string }[] = [
+  { key: "light", label: "Light" },
+  { key: "dark", label: "Dark" },
+  { key: "system", label: "System" },
+];
+
 export default function AppearanceSettings() {
+  const { P, CATEGORY_COLORS, styles, mode, setMode, scheme } =
+    useStyles(makeStyles);
+
   return (
     <SettingsScaffold subtitle="Taskly uses the Lavender Fields theme.">
       <SettingsSection label="Theme">
         <SettingsRow label="Active theme" value="Lavender Fields" />
-        <SettingsRow label="Mode" value="Light" last />
+        <SettingsRow
+          label="Mode"
+          value={
+            mode === "system"
+              ? `System (${scheme === "dark" ? "Dark" : "Light"})`
+              : scheme === "dark"
+                ? "Dark"
+                : "Light"
+          }
+          last
+        />
       </SettingsSection>
 
-      <SettingsNote>
-        A dark mode is on the way. Until then Taskly stays in light mode
-        regardless of your system setting.
-      </SettingsNote>
+      <SettingsSection label="Appearance">
+        <View style={styles.segmented}>
+          {MODES.map((m) => {
+            const active = mode === m.key;
+            return (
+              <TouchableOpacity
+                key={m.key}
+                onPress={() => setMode(m.key)}
+                activeOpacity={0.8}
+                style={[styles.segment, active && styles.segmentActive]}
+              >
+                <Text
+                  style={[
+                    styles.segmentText,
+                    active && styles.segmentTextActive,
+                  ]}
+                >
+                  {m.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+      </SettingsSection>
 
       <SettingsSection label="Palette">
         <View style={styles.swatchRow}>
@@ -63,7 +101,31 @@ export default function AppearanceSettings() {
   );
 }
 
-const styles = StyleSheet.create({
+const makeStyles = (P: Palette) => StyleSheet.create({
+  segmented: {
+    flexDirection: "row",
+    gap: 8,
+    paddingVertical: 14,
+  },
+  segment: {
+    flex: 1,
+    paddingVertical: 11,
+    borderRadius: 12,
+    alignItems: "center",
+    borderWidth: 1.5,
+    borderColor: P.border,
+  },
+  segmentActive: {
+    backgroundColor: P.plum,
+    borderColor: P.plum,
+  },
+  segmentText: {
+    fontSize: 12,
+    fontFamily: FONTS.sansBold,
+    color: P.textMid,
+    letterSpacing: 0.6,
+  },
+  segmentTextActive: { color: P.onAccent },
   swatchRow: {
     flexDirection: "row",
     flexWrap: "wrap",
