@@ -30,8 +30,22 @@ yarn-error.*
 .DS_Store
 *.pem
 
-# local env files
-.env*.local
+# env files — may hold API keys or tokens. Commit a .env.example instead.
+.env
+.env.*
+!.env.example
+
+# signing keys and service credentials
+*.keystore
+credentials.json
+credentials/
+google-services.json
+GoogleService-Info.plist
+
+# Claude Code
+CLAUDE.md
+CLAUDE.local.md
+.claude/settings.local.json
 
 # typescript
 *.tsbuildinfo
