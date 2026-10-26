@@ -55,16 +55,18 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const hideToast = useCallback(() => {
     clearTimer();
-    progress.value = withTiming(0, { duration: 180 }, (finished) => {
+    // set() rather than assigning .value — the React Compiler treats a hook's
+    // return value as immutable and won't compile writes to its properties.
+    progress.set(withTiming(0, { duration: 180 }, (finished) => {
       if (finished) runOnJS(setToast)(null);
-    });
+    }));
   }, [clearTimer, progress]);
 
   const showToast = useCallback(
     (message: string, action?: ToastAction) => {
       clearTimer();
       setToast({ message, action });
-      progress.value = withTiming(1, { duration: 220 });
+      progress.set(withTiming(1, { duration: 220 }));
       timer.current = setTimeout(hideToast, VISIBLE_MS);
     },
     [clearTimer, hideToast, progress],

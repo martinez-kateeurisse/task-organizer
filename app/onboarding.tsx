@@ -6,6 +6,7 @@ import {
   NativeScrollEvent,
   NativeSyntheticEvent,
   ScrollView,
+  ScrollViewInstance,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -44,7 +45,7 @@ export default function Onboarding() {
   const { P, styles } = useStyles(makeStyles);
   const { completeOnboarding } = usePreferences();
   const { width } = useWindowDimensions();
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const [index, setIndex] = useState(0);
 
   const isLast = index === SLIDES.length - 1;

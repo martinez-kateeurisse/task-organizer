@@ -47,6 +47,9 @@ function TabsWithLoader() {
     );
   }
 
+  // tabBarIcon's `color` is typed as React Native's broad ColorValue, which
+  // Ionicons doesn't accept. The tab bar only ever passes the tint strings set
+  // below, so each icon narrows it with `as string`.
   return (
     <Tabs
       screenOptions={{
@@ -77,7 +80,7 @@ function TabsWithLoader() {
               <Ionicons
                 name={focused ? "home" : "home-outline"}
                 size={22}
-                color={color}
+                color={color as string}
               />
               {/* Badge sits in the top-right corner of the icon using absolute positioning */}
               <PendingBadge />
@@ -93,7 +96,7 @@ function TabsWithLoader() {
             <Ionicons
               name={focused ? "calendar" : "calendar-outline"}
               size={22}
-              color={color}
+              color={color as string}
             />
           ),
         }}
@@ -106,7 +109,7 @@ function TabsWithLoader() {
             <Ionicons
               name={focused ? "add-circle" : "add-circle-outline"}
               size={26}
-              color={focused ? P.plum : color}
+              color={focused ? P.plum : (color as string)}
             />
           ),
         }}
@@ -119,7 +122,7 @@ function TabsWithLoader() {
             <Ionicons
               name={focused ? "bar-chart" : "bar-chart-outline"}
               size={22}
-              color={color}
+              color={color as string}
             />
           ),
         }}
@@ -132,7 +135,7 @@ function TabsWithLoader() {
             <Ionicons
               name={focused ? "person" : "person-outline"}
               size={22}
-              color={color}
+              color={color as string}
             />
           ),
         }}
