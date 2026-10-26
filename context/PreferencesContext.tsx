@@ -7,11 +7,13 @@ import {
   useRef,
   useState,
 } from "react";
+import { INITIAL_REMINDERS, Reminder } from "../constants/data";
 import type { TaskFilterPrefs } from "../hooks/useTaskFilters";
+import { syncReminder } from "../utils/notifications";
 
 // ─── PREFERENCES CONTEXT ──────────────────────────────────────────────────────
 // Small persisted settings that aren't task data: whether the intro has been
-// seen, and each screen's filter/sort choices.
+// seen, each screen's filter/sort choices, and which Profile reminders are on.
 //
 // The provider renders nothing until the read finishes, so consumers can treat
 // stored values as available synchronously — that lets useTaskFilters seed its
@@ -21,9 +23,22 @@ interface Prefs {
   onboarded: boolean;
   // Keyed by screen ("dashboard", "calendar") so their filters stay separate.
   filters: Record<string, TaskFilterPrefs>;
+  // Only the on/off state is stored, keyed by reminder id. The reminders
+  // themselves are fixed, and an id with no entry uses its default.
+  remindersActive: Record<number, boolean>;
 }
 
-const DEFAULT_PREFS: Prefs = { onboarded: false, filters: {} };
+const DEFAULT_PREFS: Prefs = {
+  onboarded: false,
+  filters: {},
+  remindersActive: {},
+};
+
+const withActive = (p: Prefs): Reminder[] =>
+  INITIAL_REMINDERS.map((r) => ({
+    ...r,
+    active: p.remindersActive[r.id] ?? r.active,
+  }));
 
 interface PreferencesContextType {
   loading: boolean;
@@ -32,6 +47,8 @@ interface PreferencesContextType {
   resetOnboarding: () => void;
   getFilters: (key: string) => TaskFilterPrefs | undefined;
   saveFilters: (key: string, prefs: TaskFilterPrefs) => void;
+  reminders: Reminder[];
+  setReminderActive: (id: number, active: boolean) => void;
 }
 
 const PreferencesContext = createContext<PreferencesContextType | null>(null);
@@ -64,6 +81,10 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
       } finally {
         setLoading(false);
       }
+      // Notifications live in the OS, not in storage, so re-syncing on launch
+      // makes the schedule match the toggles — including reminders that
+      // default to on and have never been scheduled.
+      withActive(prefsRef.current).forEach((r) => syncReminder(r));
     }
     loadPrefs();
   }, []);
@@ -93,6 +114,17 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     });
   }
 
+  function setReminderActive(id: number, active: boolean) {
+    const current = prefsRef.current;
+    const next = {
+      ...current,
+      remindersActive: { ...current.remindersActive, [id]: active },
+    };
+    update(next);
+    const reminder = withActive(next).find((r) => r.id === id);
+    if (reminder) syncReminder(reminder);
+  }
+
   if (loading) return null;
 
   return (
@@ -104,6 +136,8 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         resetOnboarding,
         getFilters,
         saveFilters,
+        reminders: withActive(prefs),
+        setReminderActive,
       }}
     >
       {children}

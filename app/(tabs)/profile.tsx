@@ -12,22 +12,20 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Path } from "react-native-svg";
 import EditProfileModal from "../../components/EditProfileModal";
-import { initials, INITIAL_REMINDERS, Reminder } from "../../constants/data";
+import { initials, streakLength } from "../../constants/data";
 import { FONTS, onGradientAlpha, Palette } from "../../constants/theme";
+import { usePreferences } from "../../context/PreferencesContext";
 import { useStyles } from "../../context/ThemeContext";
 import { useProfile } from "../../context/ProfileContext";
-import { cancelReminder, scheduleReminder } from "../../utils/notifications";
+import { useTasks } from "../../context/TaskContext";
+import { useToday } from "../../hooks/useToday";
 
 // ─── PROFILE SCREEN ───────────────────────────────────────────────────────────
 // Three sections:
 //   1. Profile header card
-//   2. Reminders — each toggle schedules or cancels real notifications
+//   2. Reminders — each toggle is saved and schedules or cancels real
+//      notifications (see PreferencesContext)
 //   3. Settings list
-
-// notifIds stores the scheduled notification identifiers for each reminder.
-// Shape: { [reminderId]: ['notif-uuid-1', 'notif-uuid-2', ...] }
-// We need these to cancel the right notifications when a toggle is turned off.
-type NotifIds = Record<number, string[]>;
 
 // Each row maps to a screen in the app/settings stack
 const SETTINGS = [
@@ -42,38 +40,10 @@ export default function ProfileScreen() {
   const { P, styles } = useStyles(makeStyles);
   const { profile } = useProfile();
   const [editingProfile, setEditingProfile] = useState(false);
-  const [reminders, setReminders] = useState<Reminder[]>(INITIAL_REMINDERS);
-  const [notifIds, setNotifIds] = useState<NotifIds>({});
-
-  async function toggleReminder(id: number) {
-    const reminder = reminders.find((r) => r.id === id);
-    if (!reminder) return;
-
-    if (reminder.active) {
-      // Turning OFF — cancel all notifications tied to this reminder
-      const ids = notifIds[id] ?? [];
-      await cancelReminder(ids);
-      // Remove this reminder's ids from state
-      setNotifIds((prev) => {
-        const next = { ...prev };
-        delete next[id];
-        return next;
-      });
-    } else {
-      // Turning ON — schedule notifications and store the returned identifiers
-      const ids = await scheduleReminder(
-        reminder.title,
-        reminder.time,
-        reminder.days,
-      );
-      setNotifIds((prev) => ({ ...prev, [id]: ids }));
-    }
-
-    // Flip the active boolean in the reminders list
-    setReminders((prev) =>
-      prev.map((r) => (r.id === id ? { ...r, active: !r.active } : r)),
-    );
-  }
+  const { reminders, setReminderActive } = usePreferences();
+  const { tasks } = useTasks();
+  const today = useToday();
+  const streak = streakLength(tasks, today);
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
@@ -99,9 +69,11 @@ export default function ProfileScreen() {
               {profile.email || "No email set"}
             </Text>
             <View style={styles.badgeRow}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>🔥 7-day streak</Text>
-              </View>
+              {streak > 0 && (
+                <View style={styles.badge}>
+                  <Text style={styles.badgeText}>🔥 {streak}-day streak</Text>
+                </View>
+              )}
               <View style={styles.badge}>
                 <Text style={styles.badgeText}>✓ Pro</Text>
               </View>
@@ -138,11 +110,11 @@ export default function ProfileScreen() {
               </Text>
             </View>
             {/* Switch is RN's native toggle.
-                onValueChange fires when the user flips it — we call toggleReminder
-                which schedules or cancels the actual OS notification. */}
+                onValueChange fires when the user flips it — setReminderActive
+                saves the choice and schedules or cancels the OS notifications. */}
             <Switch
               value={r.active}
-              onValueChange={() => toggleReminder(r.id)}
+              onValueChange={(active) => setReminderActive(r.id, active)}
               trackColor={{ false: P.border, true: P.plum }}
               thumbColor={P.onGradient}
               ios_backgroundColor={P.border}

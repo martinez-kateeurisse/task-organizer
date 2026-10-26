@@ -47,8 +47,14 @@ export interface Reminder {
 }
 
 // ─── DATE HELPERS ─────────────────────────────────────────────────────────────
-// fmt: turns a Date into a 'YYYY-MM-DD' string used as task date keys
-export const fmt = (d: Date): string => d.toISOString().split("T")[0];
+// fmt: turns a Date into a 'YYYY-MM-DD' string used as task date keys.
+// Built from local date parts — toISOString() converts to UTC, which puts
+// anything before the user's UTC offset (e.g. midnight–8 AM in UTC+8) on the
+// previous day.
+export const fmt = (d: Date): string => {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+};
 
 // addDays: returns a new Date that is n days from d (negative = past)
 export const addDays = (d: Date, n: number): Date => {
@@ -57,7 +63,23 @@ export const addDays = (d: Date, n: number): Date => {
   return r;
 };
 
-export const TODAY = new Date();
+// streakLength: consecutive days, counting back from today, that have at least
+// one completed task. Today only counts once something is done, but an empty
+// morning doesn't break a streak that yesterday kept alive.
+export function streakLength(tasks: Task[], today: Date): number {
+  const doneDates = new Set(tasks.filter((t) => t.done).map((t) => t.date));
+  let day = doneDates.has(fmt(today)) ? today : addDays(today, -1);
+  let count = 0;
+  while (doneDates.has(fmt(day)) && count <= 365) {
+    count++;
+    day = addDays(day, -1);
+  }
+  return count;
+}
+
+// Only used to date the sample tasks below. Screens read the live date from
+// useToday(), since a module-level date freezes at launch.
+const TODAY = new Date();
 
 // ─── PROFILE ──────────────────────────────────────────────────────────────────
 export const INITIAL_PROFILE: Profile = {
@@ -191,18 +213,6 @@ export const INITIAL_TASKS: Task[] = [
     date: fmt(addDays(TODAY, -2)),
     category: "Personal",
   },
-];
-
-// ─── WEEKLY STATS ─────────────────────────────────────────────────────────────
-// Hardcoded for the Stats screen bar chart (will be computed from real data later)
-export const WEEKLY_STATS = [
-  { day: "Mon", done: 3, total: 4 },
-  { day: "Tue", done: 5, total: 5 },
-  { day: "Wed", done: 2, total: 6 },
-  { day: "Thu", done: 4, total: 4 },
-  { day: "Fri", done: 1, total: 3 },
-  { day: "Sat", done: 6, total: 7 },
-  { day: "Sun", done: 3, total: 3 },
 ];
 
 // ─── REMINDERS ────────────────────────────────────────────────────────────────

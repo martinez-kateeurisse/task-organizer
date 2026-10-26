@@ -15,12 +15,13 @@ import SearchBar from "../../components/SearchBar";
 import TaskDetailModal from "../../components/TaskDetailModal";
 import TaskFilterBar from "../../components/TaskFilterBar";
 import TaskRow from "../../components/TaskRow";
-import { addDays, fmt, Task, TODAY } from "../../constants/data";
+import { addDays, fmt, Task } from "../../constants/data";
 import { FONTS, onGradientAlpha, Palette } from "../../constants/theme";
 import { useStyles } from "../../context/ThemeContext";
 import { useDeleteWithUndo } from "../../hooks/useDeleteWithUndo";
 import { useTasks } from "../../context/TaskContext";
 import { useTaskFilters } from "../../hooks/useTaskFilters";
+import { useToday } from "../../hooks/useToday";
 
 // ─── DASHBOARD SCREEN ─────────────────────────────────────────────────────────
 // Home tab: greeting, circular progress ring, stat chips, today's task list.
@@ -33,8 +34,9 @@ export default function DashboardScreen() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const filters = useTaskFilters("dashboard");
+  const today = useToday();
 
-  const todayStr = fmt(TODAY);
+  const todayStr = fmt(today);
   const allTodayTasks = tasks.filter((t) => t.date === todayStr);
   const todayTasks = filters.apply(allTodayTasks);
   const done = todayTasks.filter((t) => t.done).length;
@@ -47,12 +49,12 @@ export default function DashboardScreen() {
   const cx = R + 10; // center x/y within the SVG viewport
   const cy = R + 10;
 
-  const dateStr = TODAY.toLocaleDateString("en-US", {
+  const dateStr = today.toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
   });
-  const hr = TODAY.getHours();
+  const hr = today.getHours();
   const greeting =
     hr < 12 ? "Good morning" : hr < 17 ? "Good afternoon" : "Good evening";
 
@@ -61,7 +63,7 @@ export default function DashboardScreen() {
   const upcomingTasks = tasks
     .filter((t) => {
       if (t.done) return false;
-      const next3 = [1, 2, 3].map((n) => fmt(addDays(TODAY, n)));
+      const next3 = [1, 2, 3].map((n) => fmt(addDays(today, n)));
       return next3.includes(t.date);
     })
     .sort((a, b) => a.date.localeCompare(b.date)); // sort by nearest date first

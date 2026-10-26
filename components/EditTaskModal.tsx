@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
     DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
     Modal,
     Platform,
@@ -42,8 +42,8 @@ export default function EditTaskModal({ task, onClose }: Props) {
 
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<Priority>("medium");
-  const [category, setCategory] = useState<string>("");
-  const [dueDate, setDueDate] = useState<Date>(new Date());
+  const [pickedCategory, setCategory] = useState<string>("");
+  const [dueDate, setDueDate] = useState<Date>(() => new Date());
   const [showPicker, setShowPicker] = useState(false);
   const [showManage, setShowManage] = useState(false);
   const [notes, setNotes] = useState("");
@@ -53,9 +53,14 @@ export default function EditTaskModal({ task, onClose }: Props) {
   const [tagInput, setTagInput] = useState("");
   const [reminderTime, setReminderTime] = useState<string | undefined>();
 
-  // Pre-fill all fields when a task is passed in.
+  // Pre-fill all fields whenever a different task is opened. Done during render
+  // rather than in an effect, so the sheet's first frame already shows the
+  // task instead of the previous one. Tracking null too means reopening the
+  // same task after a cancel still resets the cancelled edits.
   // Adding T12:00:00 prevents timezone shift that can move the date back by one day.
-  useEffect(() => {
+  const [loadedTask, setLoadedTask] = useState<Task | null>(null);
+  if (task !== loadedTask) {
+    setLoadedTask(task);
     if (task) {
       setTitle(task.title);
       setPriority(task.priority);
@@ -69,15 +74,13 @@ export default function EditTaskModal({ task, onClose }: Props) {
       setTagInput("");
       setReminderTime(task.reminderTime);
     }
-  }, [task]);
+  }
 
-  // If the selected category was renamed or deleted in the manage modal,
-  // fall back to the first category so save never writes a stale name
-  useEffect(() => {
-    if (task && !categories.some((c) => c.name === category)) {
-      setCategory(categories[0]?.name ?? "");
-    }
-  }, [categories, category, task]);
+  // If the picked category was renamed or deleted in the manage modal, fall
+  // back to the first one so save never writes a stale name
+  const category = categories.some((c) => c.name === pickedCategory)
+    ? pickedCategory
+    : (categories[0]?.name ?? "");
 
   function addSubtask() {
     const t = subtaskInput.trim();

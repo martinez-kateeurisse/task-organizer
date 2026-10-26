@@ -1,5 +1,5 @@
 import * as Notifications from "expo-notifications";
-import { Task } from "../constants/data";
+import { Reminder, Task } from "../constants/data";
 
 // ─── NOTIFICATION BEHAVIOUR ───────────────────────────────────────────────────
 // This tells the app how to display a notification when it arrives while the
@@ -33,19 +33,32 @@ export const DAY_MAP: Record<string, number[]> = {
   "Sat & Sun": [7, 1],
 };
 
-// ─── SCHEDULE ─────────────────────────────────────────────────────────────────
-// Schedules one weekly notification per day for a reminder.
-// Returns an array of notification identifiers — we store these so we can
-// cancel the exact notifications later when the toggle is turned off.
+// ─── PROFILE REMINDERS ────────────────────────────────────────────────────────
+// Each reminder schedules one weekly notification per weekday it runs on.
+// A "weekly" trigger fires at the same time on the same weekday every week, so
+// "Every day" is 7 weekly triggers (one per day of the week).
 //
-// A "weekly" trigger fires at the same time on the same weekday every week.
-// For "Every day" we create 7 weekly triggers (one per day of the week).
-export async function scheduleReminder(
-  title: string,
-  time: string, // format: "08:00 AM"
-  days: string,
-): Promise<string[]> {
-  const [timePart, meridiem] = time.split(" ");
+// As with task reminders, the notification ids are derived — from the reminder
+// id and weekday — rather than stored. Ids kept only in memory were lost on
+// restart, leaving notifications that could never be cancelled.
+const reminderSlotId = (reminderId: number, weekday: number) =>
+  `taskly-reminder-${reminderId}-${weekday}`;
+
+// Cancels every weekday slot the reminder could occupy, then schedules the
+// days it runs on if it's active. Safe to call repeatedly.
+export async function syncReminder(reminder: Reminder): Promise<void> {
+  await Promise.all(
+    [1, 2, 3, 4, 5, 6, 7].map((weekday) =>
+      Notifications.cancelScheduledNotificationAsync(
+        reminderSlotId(reminder.id, weekday),
+      ).catch(() => {
+        // Nothing scheduled in that slot — nothing to cancel.
+      }),
+    ),
+  );
+  if (!reminder.active) return;
+
+  const [timePart, meridiem] = reminder.time.split(" "); // format: "08:00 AM"
   const [hourStr, minuteStr] = timePart.split(":");
   let hour = parseInt(hourStr, 10);
   const minute = parseInt(minuteStr, 10);
@@ -54,35 +67,28 @@ export async function scheduleReminder(
   if (meridiem === "PM" && hour !== 12) hour += 12;
   if (meridiem === "AM" && hour === 12) hour = 0;
 
-  const weekdays = DAY_MAP[days] ?? [1, 2, 3, 4, 5, 6, 7];
-  const identifiers: string[] = [];
+  const weekdays = DAY_MAP[reminder.days] ?? [1, 2, 3, 4, 5, 6, 7];
 
-  for (const weekday of weekdays) {
-    const id = await Notifications.scheduleNotificationAsync({
-      content: {
-        title: "🌿 Taskly Reminder",
-        body: title,
-        sound: true,
-      },
-      // WeeklyTrigger fires at the specified hour/minute on the specified weekday every week
-      trigger: {
-        type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
-        weekday,
-        hour,
-        minute,
-      },
-    });
-    identifiers.push(id);
-  }
-
-  return identifiers;
-}
-
-// ─── CANCEL ───────────────────────────────────────────────────────────────────
-// Cancels all notifications for a reminder using the identifiers returned by scheduleReminder.
-export async function cancelReminder(identifiers: string[]): Promise<void> {
-  for (const id of identifiers) {
-    await Notifications.cancelScheduledNotificationAsync(id);
+  try {
+    for (const weekday of weekdays) {
+      await Notifications.scheduleNotificationAsync({
+        identifier: reminderSlotId(reminder.id, weekday),
+        content: {
+          title: "🌿 Taskly Reminder",
+          body: reminder.title,
+          sound: true,
+        },
+        // WeeklyTrigger fires at the specified hour/minute on the specified weekday every week
+        trigger: {
+          type: Notifications.SchedulableTriggerInputTypes.WEEKLY,
+          weekday,
+          hour,
+          minute,
+        },
+      });
+    }
+  } catch {
+    // Permission denied or scheduling unavailable — the toggle still saves.
   }
 }
 

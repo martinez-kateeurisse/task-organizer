@@ -1,5 +1,5 @@
 import { Ionicons } from "@expo/vector-icons";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   Modal,
   ScrollView,
@@ -36,13 +36,16 @@ export default function EditProfileModal({ visible, onClose }: Props) {
   const [email, setEmail] = useState(profile.email);
 
   // Re-seed the draft fields each time the sheet opens so a cancelled edit
-  // doesn't leave stale text behind on the next open.
-  useEffect(() => {
+  // doesn't leave stale text behind on the next open. Done during render, on
+  // the closed → open transition, so the first frame shows the saved values.
+  const [wasVisible, setWasVisible] = useState(visible);
+  if (visible !== wasVisible) {
+    setWasVisible(visible);
     if (visible) {
       setName(profile.name);
       setEmail(profile.email);
     }
-  }, [visible, profile.name, profile.email]);
+  }
 
   const trimmedName = name.trim();
   const trimmedEmail = email.trim();

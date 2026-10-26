@@ -1,3 +1,4 @@
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import { useState } from "react";
 import {
@@ -13,16 +14,19 @@ import SearchBar from "../../components/SearchBar";
 import TaskDetailModal from "../../components/TaskDetailModal";
 import TaskFilterBar from "../../components/TaskFilterBar";
 import TaskRow from "../../components/TaskRow";
-import { fmt, Task, TODAY } from "../../constants/data";
+import { fmt, Task } from "../../constants/data";
 import { FONTS, Palette } from "../../constants/theme";
 import { useStyles } from "../../context/ThemeContext";
 import { useDeleteWithUndo } from "../../hooks/useDeleteWithUndo";
 import { useTasks } from "../../context/TaskContext";
 import { useTaskFilters } from "../../hooks/useTaskFilters";
+import { useToday } from "../../hooks/useToday";
 
 // ─── CALENDAR SCREEN ──────────────────────────────────────────────────────────
 // A full month grid. Days with tasks show a small lavender dot.
 // Tapping a day selects it and shows that day's tasks below the grid.
+// The arrows in the header step through months; the selected day is kept, so
+// its tasks stay listed until another day is tapped.
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -30,15 +34,20 @@ export default function CalendarScreen() {
   const { P, styles } = useStyles(makeStyles);
   const { tasks, toggleTask } = useTasks();
   const deleteWithUndo = useDeleteWithUndo();
-  const [selectedDate, setSelectedDate] = useState(fmt(TODAY));
+  const today = useToday();
+  const todayStr = fmt(today);
+  const [selectedDate, setSelectedDate] = useState(todayStr);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [detailTask, setDetailTask] = useState<Task | null>(null);
   const filters = useTaskFilters("calendar");
-  const year = TODAY.getFullYear();
-  const month = TODAY.getMonth();
-  const firstDay = new Date(year, month, 1).getDay(); // 0 = Sunday
+  // Months away from the current one; the Date constructor rolls over years
+  const [monthOffset, setMonthOffset] = useState(0);
+  const viewMonth = new Date(today.getFullYear(), today.getMonth() + monthOffset, 1);
+  const year = viewMonth.getFullYear();
+  const month = viewMonth.getMonth();
+  const firstDay = viewMonth.getDay(); // 0 = Sunday
   const daysInMonth = new Date(year, month + 1, 0).getDate();
-  const monthName = TODAY.toLocaleDateString("en-US", {
+  const monthName = viewMonth.toLocaleDateString("en-US", {
     month: "long",
     year: "numeric",
   });
@@ -75,8 +84,28 @@ export default function CalendarScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Calendar</Text>
-          <Text style={styles.subtitle}>{monthName}</Text>
+          <View>
+            <Text style={styles.title}>Calendar</Text>
+            <Text style={styles.subtitle}>{monthName}</Text>
+          </View>
+          <View style={styles.monthNav}>
+            <TouchableOpacity
+              onPress={() => setMonthOffset((o) => o - 1)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.monthBtn}
+            >
+              <Ionicons name="chevron-back" size={18} color={P.plum} />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setMonthOffset((o) => o + 1)}
+              activeOpacity={0.7}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              style={styles.monthBtn}
+            >
+              <Ionicons name="chevron-forward" size={18} color={P.plum} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <SearchBar
@@ -104,7 +133,7 @@ export default function CalendarScreen() {
                   return <View key={`e${ci}`} style={styles.emptyCell} />;
 
                 const dateStr = fmt(new Date(year, month, day, 12, 0, 0));
-                const isToday = dateStr === fmt(TODAY);
+                const isToday = dateStr === todayStr;
                 const isSel = dateStr === selectedDate;
                 const hasTasks = (taskCountByDate[dateStr] || 0) > 0;
 
@@ -240,13 +269,30 @@ export default function CalendarScreen() {
 const makeStyles = (P: Palette) => StyleSheet.create({
   safe: { flex: 1, backgroundColor: P.lilac },
   content: { paddingHorizontal: 18, paddingBottom: 20 },
-  header: { paddingTop: 28, marginBottom: 20 },
+  header: {
+    paddingTop: 28,
+    marginBottom: 20,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "flex-end",
+  },
   title: { fontSize: 30, fontFamily: FONTS.serif, color: P.textDark },
   subtitle: {
     fontSize: 13,
     fontFamily: FONTS.sans,
     color: P.textSoft,
     marginTop: 4,
+  },
+  monthNav: { flexDirection: "row", gap: 8 },
+  monthBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: P.white,
+    borderWidth: 1.5,
+    borderColor: P.border,
   },
 
   gridCard: {

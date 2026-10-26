@@ -2,10 +2,11 @@ import { LinearGradient } from "expo-linear-gradient";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Svg, { Circle, Text as SvgText } from "react-native-svg";
-import { TODAY, addDays, fmt } from "../../constants/data";
+import { addDays, fmt, streakLength } from "../../constants/data";
 import { FONTS, onGradientAlpha, Palette } from "../../constants/theme";
 import { useStyles } from "../../context/ThemeContext";
 import { useTasks } from "../../context/TaskContext";
+import { useToday } from "../../hooks/useToday";
 
 // ─── STATS SCREEN ─────────────────────────────────────────────────────────────
 // All numbers are computed live from the real task list.
@@ -14,6 +15,7 @@ import { useTasks } from "../../context/TaskContext";
 export default function StatsScreen() {
   const { P, categoryStyle, styles } = useStyles(makeStyles);
   const { tasks, categories } = useTasks();
+  const today = useToday();
 
   // ── Overall completion rate ───────────────────────────────────────────────
   const totalDone = tasks.filter((t) => t.done).length;
@@ -22,32 +24,20 @@ export default function StatsScreen() {
     totalTasks === 0 ? 0 : Math.round((totalDone / totalTasks) * 100);
 
   // ── Streak ────────────────────────────────────────────────────────────────
-  // Walk backwards day by day from today.
-  // A day "counts" if it has at least one completed task.
-  // Stop as soon as we hit a day with no completed tasks.
-  let streak = 0;
-  let checkDate = new Date(TODAY);
-  while (true) {
-    const dateStr = fmt(checkDate);
-    const daysDone = tasks.filter((t) => t.date === dateStr && t.done).length;
-    if (daysDone === 0) break;
-    streak++;
-    checkDate = addDays(checkDate, -1); // step back one day
-    if (streak > 365) break; // safety cap
-  }
+  const streak = streakLength(tasks, today);
 
   // ── Weekly chart data ─────────────────────────────────────────────────────
   // Build stats for the last 7 days (today + 6 days back).
   // Each entry has: day label, done count, total count.
   const weeklyStats = Array.from({ length: 7 }, (_, i) => {
-    const date = addDays(TODAY, -(6 - i)); // oldest day first
+    const date = addDays(today, -(6 - i)); // oldest day first
     const dateStr = fmt(date);
     const dayTasks = tasks.filter((t) => t.date === dateStr);
     return {
       day: date.toLocaleDateString("en-US", { weekday: "short" }).slice(0, 3),
       done: dayTasks.filter((t) => t.done).length,
       total: dayTasks.length,
-      isToday: dateStr === fmt(TODAY),
+      isToday: i === 6,
     };
   });
 

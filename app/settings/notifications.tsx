@@ -1,6 +1,13 @@
 import * as Notifications from "expo-notifications";
-import { useCallback, useEffect, useState } from "react";
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { useEffect, useState } from "react";
+import {
+  AppState,
+  Linking,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from "react-native";
 import { formatReminder } from "../../components/ReminderField";
 import {
   SettingsNote,
@@ -22,21 +29,28 @@ export default function NotificationsSettings() {
   const { tasks } = useTasks();
   const [status, setStatus] = useState<string | null>(null);
 
-  const refresh = useCallback(async () => {
-    const { status: s } = await Notifications.getPermissionsAsync();
-    setStatus(s);
-  }, []);
-
+  // Checked on open and again whenever the app returns to the foreground —
+  // that's how the user comes back after changing the permission in the
+  // system settings app, which this screen can send them to.
   useEffect(() => {
+    const refresh = () =>
+      Notifications.getPermissionsAsync().then(({ status: s }) => setStatus(s));
     refresh();
-  }, [refresh]);
+    const sub = AppState.addEventListener("change", (state) => {
+      if (state === "active") refresh();
+    });
+    return () => sub.remove();
+  }, []);
 
   async function handleEnable() {
     const granted = await requestPermission();
+    if (granted) {
+      setStatus("granted");
+      return;
+    }
     // Once permission is denied the OS stops showing the dialog, so the only
     // way back is the system settings app.
-    if (!granted) Linking.openSettings();
-    refresh();
+    Linking.openSettings();
   }
 
   const withReminders = tasks

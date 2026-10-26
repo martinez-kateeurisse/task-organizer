@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
   DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Platform, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { FONTS, Palette } from "../constants/theme";
 import { useStyles } from "../context/ThemeContext";
@@ -46,6 +46,15 @@ export default function ReminderField({ value, onChange, dueDate }: Props) {
   const { P, styles } = useStyles(makeStyles);
   const [showPicker, setShowPicker] = useState(false);
 
+  // The clock is held in state rather than read during render, and ticks so
+  // the "already passed" warning appears if the time slips by while the form
+  // is open.
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 30_000);
+    return () => clearInterval(timer);
+  }, []);
+
   function onTimeChange(event: DateTimePickerEvent, selected?: Date) {
     if (Platform.OS === "android") setShowPicker(false);
     // Android reports a dismissed picker rather than returning nothing
@@ -59,7 +68,7 @@ export default function ReminderField({ value, onChange, dueDate }: Props) {
       const [hh, mm] = value.split(":").map(Number);
       const when = new Date(dueDate);
       when.setHours(hh, mm, 0, 0);
-      return when.getTime() <= Date.now();
+      return when.getTime() <= now;
     })();
 
   return (

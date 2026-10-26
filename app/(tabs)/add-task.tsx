@@ -2,7 +2,7 @@ import { Ionicons } from "@expo/vector-icons";
 import DateTimePicker, {
     DateTimePickerEvent,
 } from "@react-native-community/datetimepicker";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
     Platform,
     ScrollView,
@@ -16,10 +16,11 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import ManageCategoriesModal from "../../components/ManageCategoriesModal";
 import ReminderField from "../../components/ReminderField";
 import type { Priority as PriorityType, Subtask } from "../../constants/data";
-import { fmt, TODAY } from "../../constants/data";
+import { fmt } from "../../constants/data";
 import { FONTS, Palette } from "../../constants/theme";
 import { useStyles } from "../../context/ThemeContext";
 import { useTasks } from "../../context/TaskContext";
+import { useToday } from "../../hooks/useToday";
 
 // ─── ADD TASK SCREEN ──────────────────────────────────────────────────────────
 // Form to create a new task. On submit, calls addTask() from TaskContext,
@@ -28,22 +29,21 @@ import { useTasks } from "../../context/TaskContext";
 export default function AddTaskScreen() {
   const { P, PRIORITY, categoryStyle, styles } = useStyles(makeStyles);
   const { addTask, categories } = useTasks();
+  const today = useToday();
 
   const [title, setTitle] = useState("");
   const [priority, setPriority] = useState<PriorityType>("medium");
-  const [category, setCategory] = useState<string>(categories[0]?.name ?? "");
-  const [dueDate, setDueDate] = useState<Date>(new Date(TODAY));
+  const [pickedCategory, setCategory] = useState<string>(categories[0]?.name ?? "");
+  const [dueDate, setDueDate] = useState<Date>(() => new Date(today));
   const [showPicker, setShowPicker] = useState(false);
   const [success, setSuccess] = useState(false);
   const [showManage, setShowManage] = useState(false);
 
-  // If the selected category was renamed or deleted in the manage modal,
-  // fall back to the first category so the form never holds a stale name
-  useEffect(() => {
-    if (!categories.some((c) => c.name === category)) {
-      setCategory(categories[0]?.name ?? "");
-    }
-  }, [categories, category]);
+  // If the picked category was renamed or deleted in the manage modal, fall
+  // back to the first one so the form never holds a stale name
+  const category = categories.some((c) => c.name === pickedCategory)
+    ? pickedCategory
+    : (categories[0]?.name ?? "");
   const [notes, setNotes] = useState("");
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
   const [subtaskInput, setSubtaskInput] = useState("");
@@ -91,7 +91,7 @@ export default function AddTaskScreen() {
     setTitle("");
     setPriority("medium");
     setCategory(categories[0]?.name ?? "");
-    setDueDate(new Date(TODAY));
+    setDueDate(new Date(today));
     setNotes("");
     setSubtasks([]);
     setSubtaskInput("");
@@ -256,7 +256,7 @@ export default function AddTaskScreen() {
               mode="date"
               display={Platform.OS === "ios" ? "compact" : "default"}
               onChange={onDateChange}
-              minimumDate={new Date(TODAY)}
+              minimumDate={today}
               accentColor={P.plum}
             />
           )}
